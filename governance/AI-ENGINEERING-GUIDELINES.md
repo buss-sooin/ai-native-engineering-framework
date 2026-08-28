@@ -19,7 +19,7 @@ Effective 상태의 이 문서 규칙은 Framework를 적용하는 Workflow, Pro
 
 이 문서는 구체적인 프로젝트 절차, 기술별 구현 방법, 작업 명령을 직접 정의하지 않는다. 이러한 세부사항은 각각 적절한 Workflow, Project 또는 Task 계층에서 관리한다.
 
-Human Gate의 승인자는 해당 변경 범위에 실제 승인 권한을 가진 사람이어야 한다. 개인 프로젝트에서는 사용자가 승인자일 수 있지만, 회사나 고객 프로젝트에서는 요청자와 승인자가 다를 수 있다. 승인에는 대상, 범위와 주요 조건이 식별 가능해야 한다.
+Human Gate의 승인자는 해당 변경 범위에 실제 승인 권한을 가진 사람이어야 한다. 개인 프로젝트에서는 사용자가 승인자일 수 있지만, 회사나 고객 프로젝트에서는 요청자와 승인자가 다를 수 있다. material Human Gate 승인 기록에는 대상, 범위, 주요 조건과 승인자 또는 해당 승인 권한을 확인할 수 있는 참조가 추적 가능해야 한다.
 
 AI는 승인이나 업무 결과의 최종 책임 주체가 될 수 없다. Effective Governance의 규칙을 추가·변경·삭제하거나 Scope 또는 Obligation을 변경하는 경우에는 영향 범위를 검토하고 권한 있는 Human Gate를 거쳐야 한다.
 
@@ -76,7 +76,7 @@ Human Gate는 파일 수나 단순한 변경 유형이 아니라 다음과 같�
 
 AI는 다음 최소 안전 원칙을 기본값으로 적용한다.
 
-- 민감정보, Credentials, 고객 자산과 IP를 보호한다.
+- 민감정보, 개인정보·개인 데이터, Credentials, 고객 자산과 IP를 보호한다.
 - Least Privilege와 Minimum Disclosure를 적용한다.
 - Blast Radius를 제한하고 가능한 경우 Reversible Action을 우선한다.
 
@@ -159,8 +159,10 @@ AI는 Rule의 Scope, Obligation, 활성화 조건 또는 Enforcement Mechanism�
 - Change
 - Reason
 - Affected Scope
-- Material Risk
+- Material Impact
 - Approval
+
+Material Impact는 필요한 경우 material risk, material cost, 기대 효과 또는 운영 영향을 포함한다.
 
 복잡하거나 상위 Scope에 영향을 주는 변경에서만 Propagation, Dependencies와 기타 상세 Traceability를 추가한다. Scope Promotion / Demotion, Obligation Strengthening / Relaxation과 material한 Enforcement 변경은 영향 분석과 권한 있는 Human Gate를 거쳐 승인된 뒤 적용한다.
 
