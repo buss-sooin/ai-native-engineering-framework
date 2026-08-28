@@ -1,6 +1,6 @@
 # AI Engineering Guidelines
 
-Status: Draft
+Status: Effective
 
 ## Purpose and Governance Authority
 
