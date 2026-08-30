@@ -4,7 +4,7 @@ Status: Effective
 
 ## Purpose and Governance Authority
 
-이 문서는 AI-Native Engineering Framework의 최상위 원칙과 사람·AI 협업 규칙을 정의하는 Canonical Governance candidate이다.
+이 문서는 AI-Native Engineering Framework의 최상위 원칙과 사람·AI 협업 규칙을 정의하는 Effective Canonical Governance다.
 
 Governance Document의 최소 상태는 다음과 같다.
 
@@ -19,9 +19,11 @@ Effective 상태의 이 문서 규칙은 Framework를 적용하는 Workflow, Pro
 
 이 문서는 구체적인 프로젝트 절차, 기술별 구현 방법, 작업 명령을 직접 정의하지 않는다. 이러한 세부사항은 각각 적절한 Workflow, Project 또는 Task 계층에서 관리한다.
 
-Human Gate의 승인자는 해당 변경 범위에 실제 승인 권한을 가진 사람이어야 한다. 개인 프로젝트에서는 사용자가 승인자일 수 있지만, 회사나 고객 프로젝트에서는 요청자와 승인자가 다를 수 있다. material Human Gate 승인 기록에는 대상, 범위, 주요 조건과 승인자 또는 해당 승인 권한을 확인할 수 있는 참조가 추적 가능해야 한다.
+한국어 기술 설명 및 기술문서의 용어·표현 규칙은 [`TECHNICAL-DOCUMENTATION-GUIDELINES.md`](TECHNICAL-DOCUMENTATION-GUIDELINES.md)를 따른다. 해당 규칙은 활성화 조건을 충족하는 Framework, Workflow, Project 및 Task의 한국어 기술 산출물에 적용한다.
 
-AI는 승인이나 업무 결과의 최종 책임 주체가 될 수 없다. Effective Governance의 규칙을 추가·변경·삭제하거나 Scope 또는 Obligation을 변경하는 경우에는 영향 범위를 검토하고 권한 있는 Human Gate를 거쳐야 한다.
+사람 승인 관문(Human Gate)의 승인자는 해당 변경 범위에 실제 승인 권한을 가진 사람이어야 한다. 개인 프로젝트에서는 사용자가 승인자일 수 있지만, 회사나 고객 프로젝트에서는 요청자와 승인자가 다를 수 있다. material 사람 승인 관문 승인 기록에는 대상, 범위, 주요 조건과 승인자 또는 해당 승인 권한을 확인할 수 있는 참조가 추적 가능해야 한다.
+
+AI는 승인이나 업무 결과의 최종 책임 주체가 될 수 없다. Effective Governance의 규칙을 추가·변경·삭제하거나 Scope 또는 Obligation을 변경하는 경우에는 영향 범위를 검토하고 권한 있는 사람 승인 관문을 거쳐야 한다.
 
 ## Canonical Context Authority
 

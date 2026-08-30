@@ -15,4 +15,8 @@ Framework-level Canonical Governance는 [`governance/AI-ENGINEERING-GUIDELINES.m
 ## Canonical Artifacts
 
 - Effective Framework Governance: [`governance/AI-ENGINEERING-GUIDELINES.md`](governance/AI-ENGINEERING-GUIDELINES.md)
-- Effective Failure Reproduction Workflow v0.1: [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md)
+- Effective Technical Documentation Governance: [`governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md`](governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md)
+- Effective Failure Reproduction Workflow v0.1:
+  - Definition: [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md)
+  - Execution Template: [`workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md`](workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md)
+  - Conformance Record: [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW-CONFORMANCE.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW-CONFORMANCE.md)
