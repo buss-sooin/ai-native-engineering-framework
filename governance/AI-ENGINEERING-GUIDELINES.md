@@ -84,6 +84,53 @@ AI는 다음 최소 안전 원칙을 기본값으로 적용한다.
 
 권한이나 데이터 취급 조건이 불명확하고 안전하게 추론할 수 없는 경우 AI는 임의로 권한이나 공개 범위를 확대하지 않고 실행 전에 중단, 보고와 확인을 수행한다. 실행 완료만으로 작업을 성공으로 간주하지 않으며, 승인된 검증 기준을 통해 결과를 확인한 뒤 수행 내용과 검증 결과를 보고한다.
 
+## AI Capability and Collaboration Governance
+
+**역량 인지 엔지니어링 원칙(Capability-Aware Engineering Principle)**은 AI 역량(AI Capability)을 특정 제품, 모델, 에이전트, 도구 또는 현재 플랫폼 기능의 고정 목록으로 정의하지 않는다. 현재 엔지니어링 의도(Engineering Intent)와 실행 특성에 적합한 역량의 선택·조합 및 사람·AI 사이의 책임 배분을 다룬다.
+
+### 조건부 Framework Rule
+
+- 범위(Scope): Framework
+- 의무(Obligation): Conditional
+- 활성화 조건(Activation Condition): AI 역량의 선택에 따라 엔지니어링 결과(Engineering Outcome), 권한·접근 범위(authority / access), 데이터 노출(data exposure), 시스템 쓰기·변경(system write / mutation), 실행 자율성(execution autonomy), 위험(Risk), 영향 범위(Blast Radius), 가역성(reversibility) 또는 검증(Verification) 중 하나 이상이 의미 있게 달라질 수 있는 경우
+
+활성화 조건이 충족되면 현재 목적에 관련되고 실제 사용 가능한 역량을 필요한 수준에서 발견·평가하고, 엔지니어링 의도에 적합한 역량을 선택하거나 조합한다. 사람·AI 사이의 책임 배분과 필요한 권한 및 실행 경계(execution boundary)를 결정한 뒤 승인된 경계 안에서 사용하고 결과를 검증한다. 역량의 기술적 가용성이나 선택 자체는 실행 권한을 부여하지 않는다.
+
+이 조건부 규칙의 판단 관계는 다음 보조 모델로 표현한다.
+
+`Discover → Evaluate → Select / Compose → Allocate Responsibility → Bound / Authorize → Execute → Verify`
+
+이는 역량 선택과 책임 배분을 설명하는 보조적 거버넌스 모델이며, `Engineering Phase and Decision Governance`와 `Verification and Session Accountability`의 기존 생명주기(lifecycle)를 대체하거나 확장하지 않는다.
+
+### 평가와 책임 배분의 경계
+
+역량 발견은 현재 목적에 관련되고 실제로 활용 가능한 범위에 한정한다. 모든 역량을 빠짐없이 조사하거나 별도의 역량 목록 산출물을 항상 만드는 절차를 뜻하지 않는다. 평가는 필요한 수준에서 다음 관점을 포괄한다.
+
+- 엔지니어링 의도와의 적합성
+- 권한·접근 범위와 데이터 노출
+- 시스템 변경 또는 외부 영향(external effect), 실행 자율성
+- 위험·영향 범위·가역성과 실패 시 영향(failure implications)
+- 관측 가능성(Observability), 검증과 추적 가능성(traceability)
+- 사람의 직접 엔지니어링 참여 필요성
+
+책임 배분에서는 필요한 수준에서 의사결정 권한(Decision Authority), 실행 책임(Execution Responsibility), 검증 책임(Verification Responsibility), 후속 실행 권한(Continuation Authority)을 구분한다. 이는 고정된 협업 유형 분류나 새로운 권한 계층이 아니며, 사람의 최종 책임을 AI에 이전하지 않는다.
+
+사람 직접 수행, AI의 자문, AI 분석 후 사람의 실행, 제한된 AI 실행 또는 승인 경계 안의 자율적 후속 실행은 가능한 협업 결과이며 성숙도 계층이 아니다. AI 역량의 사용량이나 자동화 수준을 성숙도의 기본 척도로 삼지 않는다. 자동화 비율, AI 실행 비율, 에이전트 수, 도구 수 또는 자율 실행 시간 자체는 성숙도 단계를 정의하지 않는다. 협업의 적절성은 엔지니어링 목적, 책임 배분, 제한된 권한(bounded authority), 검증 품질과 실제 엔지니어링 결과를 기준으로 판단한다.
+
+AI가 수행 가능한 작업이라도 사람이 코드, 설정, 실행 시점의 상태(runtime state), 시스템 동작 또는 근거(Evidence)를 직접 읽고 조작하는 것이 이해, 판단 품질, 위험 통제나 학습에 더 적합하면 사람 직접 수행을 선택할 수 있다. 이는 AI-Native Engineering의 실패나 낮은 성숙도를 뜻하지 않는다.
+
+구체적인 제공자·모델·제품·도구 평가 방법, 기능 목록과 제공자별 한도, 프로젝트별 접근 권한 표, 조직 정책과의 대응 및 프로젝트 초기 구성 절차는 하위 Workflow, Project 또는 Task 범위의 책임이다. 이 원칙은 별도의 역량 분류 체계나 초기 구성 워크플로를 정의하지 않는다.
+
+### 기존 Governance와의 관계
+
+`Available ≠ Selected ≠ Authorized`
+
+역량의 가용성은 사실 또는 실행 시점의 정보일 수 있지만 Governance나 승인을 자동 변경하지 않는다. 권한 판단은 역량 자체가 아니라 행위(action), 접근(access), 범위와 실행 경계를 대상으로 하며, 기존 `Canonical Context Authority`의 권한 계층을 따른다.
+
+역량이나 실행 환경(Execution Surface)이 바뀌었다는 사실만으로 새 사람 승인 관문(Human Gate)이 생기지 않는다. 엔지니어링 의도 변경, 범위 확대, 권한·접근 범위 확대, 위험·영향 범위의 의미 있는 증가, 비가역적·고영향 작업 추가 또는 승인된 실행 경계의 실질적 변경은 기존 `Engineering Phase and Decision Governance`의 사람 승인 관문 기준으로 판단한다. 역량별 별도 승인 체계는 두지 않는다.
+
+최소 권한(Least Privilege)은 역량이 제공하는 최대 권한이 아니라 현재 작업에 필요한 최소 권한과 접근 범위를 기준으로 적용한다. 역량 선택과 실행은 기존 검증 책임을 약화시키지 않으며, 더 강한 역량을 사용한다는 이유로 검증 요구 수준을 낮추지 않는다.
+
 ## Information and Artifact Lifecycle
 
 AI는 조사 과정의 정보, 해석, 제안, 승인된 결정, 설계, 구현 결과와 검증 근거를 서로 다른 상태로 구분한다. 정보가 존재한다는 이유만으로 상위 상태로 간주하거나 Canonical Document에 직접 반영하지 않는다.
