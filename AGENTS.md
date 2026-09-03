@@ -16,4 +16,5 @@
 
 - 기존 tracked·untracked working-tree 변경을 먼저 확인하고 보존한다.
 - 승인된 목표, 경로와 실행 경계 안에서만 변경하고 검증한다.
+- Failure Reproduction Workflow의 후속 실행은 [Workflow Definition](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md)의 FRW-R09·FRW-R11과 제한된 후속 실행 묶음(Grouped Bounded Continuation) 조건을 확인한다. 상태 전환만으로 반복 승인을 요구하지 않으며, Project별 협업·권한 제약과 원격 동기화 자체의 승인 범위를 함께 확인한다.
 - 이 파일과 Canonical Artifact가 충돌하면 이 파일로 Governance를 덮어쓰지 말고 충돌과 영향을 보고한다.
