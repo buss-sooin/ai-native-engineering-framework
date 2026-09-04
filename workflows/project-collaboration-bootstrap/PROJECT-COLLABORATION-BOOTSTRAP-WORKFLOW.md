@@ -132,6 +132,47 @@ AI가 기술적으로 수행할 수 있다는 이유만으로 사람의 직접 �
 
 역할·환경·권한·책임 또는 중요한 맥락의 이동이 없는 같은 세션 안의 작은 단계 변경에는 강제하지 않는다.
 
+### 라우팅 헤더(Routing Header)
+
+새로운 Session, Work 또는 실행 세션으로 이동하도록 사용자를 라우팅하거나, 사용자가 새로운 실행 환경에서 그대로 사용할 수 있는 인계·실행 지시문을 제공하는 경우에는 상세 인계 맥락보다 먼저 라우팅 헤더(Routing Header)를 제공한다.
+
+라우팅 헤더는 실행 목적지와 사용자가 선택해야 할 실행 조건을 지시문 본문에서 다시 찾아야 하는 문제를 방지하기 위한 인계 표현 규칙이다.
+
+활성화 조건이 충족되면 다음 항목을 항상 포함한다.
+
+1. 프로젝트 / 작업 공간(Project / Workspace)
+2. 권장 Session / Work 제목(Recommended Session / Work Title)
+3. 목적지 세션 역할(Destination Session Role)
+4. 실행 환경(Execution Surface)
+5. 권장 모델(Recommended Model)
+6. 권장 추론 수준(Recommended Reasoning Level)
+
+기본 표시 순서는 다음과 같다.
+
+`Project / Workspace`
+→ `Recommended Title`
+→ `Destination Session Role`
+→ `Execution Surface`
+→ `Recommended Model`
+→ `Recommended Reasoning Level`
+
+모델 또는 추론 수준을 사용자가 직접 선택할 수 없는 실행 환경이거나 해당 개념이 적용되지 않는 경우에도 필드를 생략하지 않고 다음과 같이 식별한다.
+
+- Recommended Model: `Surface-managed / N/A`
+- Recommended Reasoning Level: `Surface-managed / N/A`
+
+라우팅 헤더는 상세 실행 지시문의 내부에 묻히도록 배치하지 않는다. 사용자가 목적 실행 환경을 생성하거나 선택하기 전에 확인할 수 있도록 인계 또는 실행 지시문의 선두에 둔다.
+
+권장 모델과 권장 추론 수준은 현재 작업의 엔지니어링 목표(Engineering Objective), 필요한 역량(Capability), 추론 복잡성, 저장소·파일·코드 접근 필요성, 변경 또는 명령 실행 필요성, 위험(Risk)·영향 범위(Blast Radius), 검증 난이도, 맥락 크기와 연속성, 실행 비용 및 사람의 학습·판단 필요성을 고려하여 선택한다.
+
+더 강한 모델이나 더 높은 추론 수준을 항상 우선하지 않는다.
+
+라우팅 헤더의 추천 정보는 실행 환경이나 역량의 선택 및 권한 상태와 구분한다.
+
+`Recommended ≠ Selected ≠ Authorized`
+
+라우팅 헤더는 아래 최소 인계 맥락을 대체하지 않는다. 인계 계약(Handoff Contract)의 활성화 조건이 충족되는 경우 상세 인계 맥락과 함께 사용한다.
+
 ### 최소 인계 맥락
 
 계약이 활성화되면 필요한 수준의 상세도로 다음을 보존한다.
@@ -192,7 +233,7 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 | PCBW-R02 — Concept Separation | Workflow | Mandatory | Workflow 활성화 시 | 프로젝트 / 작업 공간(Project / Workspace), 세션 역할(Session Role), 실행 환경(Execution Surface), 역량(Capability), 권한 및 실행 경계(Authority / Execution Boundary)를 구분한다. 작업 공간 소속이나 실행 환경·역량의 가용성은 실행 권한이 아니다. `Available ≠ Selected ≠ Authorized`를 유지한다. |
 | PCBW-R03 — Capability-Aware Routing | Workflow | Mandatory | Workflow 활성화 시 | 필요 역량과 협업 적합성을 평가한 뒤 실행 환경(Execution Surface)과 사람·AI 책임을 선택하고 실행 권한을 별도로 확인한다. 특정 실행 환경을 항상 우선하는 계층을 만들지 않는다. |
 | PCBW-R04 — Human Direct Engineering | Workflow | Mandatory | Workflow 활성화 시 | 사람의 직접 엔지니어링 수행(Human Direct Engineering)이 이해·판단·학습·위험 통제 또는 실행 단순성에 더 적합하면 정상적인 실행 선택지로 선택할 수 있다. AI 역량의 존재만으로 사람의 직접 작업을 제거하지 않는다. |
-| PCBW-R05 — Bounded Handoff | Workflow | Conditional | 역할·실행 환경 사이의 인계 또는 맥락·권한·책임 손실 위험이 있는 인계 발생 시 | 다음 책임자가 현재 상태, 실행 경계, 검증 요구와 반환 목적지를 추측하지 않도록 인계 계약(Handoff Contract)의 맥락을 보존한다. 역량·변경 권한·실행 의미가 다른 환경으로 이동할 때 세션 역할(Session Role)과 실행 환경(Execution Surface)을 각각 명시하며 일반적인 `Chat` 표현만으로 목적지를 지정하지 않는다. |
+| PCBW-R05 — Bounded Handoff | Workflow | Conditional | 역할·실행 환경 사이의 인계 또는 맥락·권한·책임 손실 위험이 있는 인계가 발생하거나, 새로운 Session / Work / 실행 세션으로 사용자를 라우팅하거나 재사용 가능한 실행 지시문을 제공하는 경우 | 다음 책임자가 현재 상태, 실행 경계, 검증 요구와 반환 목적지를 추측하지 않도록 인계 계약(Handoff Contract)의 맥락을 보존한다. 역량·변경 권한·실행 의미가 다른 환경으로 이동할 때 세션 역할(Session Role)과 실행 환경(Execution Surface)을 각각 명시하며 일반적인 `Chat` 표현만으로 목적지를 지정하지 않는다. 새로운 실행 환경으로 Routing하거나 재사용 가능한 실행 지시문을 제공할 때는 상세 지시문보다 먼저 프로젝트 / 작업 공간(Project / Workspace), 권장 Session / Work 제목(Recommended Session / Work Title), 목적지 세션 역할(Destination Session Role), 실행 환경(Execution Surface), 권장 모델(Recommended Model), 권장 추론 수준(Recommended Reasoning Level)을 포함한 라우팅 헤더(Routing Header)를 제공한다. 모델 또는 추론 수준이 해당 실행 환경에서 사용자 선택 대상이 아니면 `Surface-managed / N/A`로 식별한다. 추천은 선택이나 실행 권한을 의미하지 않으며 `Recommended ≠ Selected ≠ Authorized`를 유지한다. |
 | PCBW-R06 — Targeted Re-evaluation | Workflow | Conditional | 엔지니어링 의도, Workflow, 실행 환경, 역량 가용성, 권한·접근, 위험, 검증 또는 협업 효과에 실질적 변화 발생 시 | 영향을 받은 초기 구성 판단을 필요한 수준에서 재평가한다. 재평가 자체는 새 사람 승인 관문(Human Gate)을 뜻하지 않으며 승인 경계 변경 여부는 상위 Governance에 따라 별도 판단한다. |
 
 ## 승인과 정본화 근거
@@ -200,5 +241,13 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 - 승인 설계: `55 — Project AI Capability & Collaboration Bootstrap Workflow Design`
 - 승인 참조: 권한 있는 사용자가 제공한 `# 55 — Project AI Capability & Collaboration Bootstrap Workflow Canonicalization` 실행 지시의 사람 승인 관문 `PASS` 및 `HG-55-01`~`HG-55-06` 승인 명시
 - 승인 범위와 조건: Design 55를 Workflow Definition 하나로 정본화하고, 의미 적합성 검증과 정본 상태 확인을 통과하면 `Effective`로 처리한다. README의 최소 색인 추가 및 커밋·원격 동기화를 포함하며 상위 Governance와 FRW는 변경하지 않는다.
+
+이후 라우팅 헤더 보강 변경은 다음 범위와 근거에 따라 정본화했다.
+
+- 변경 대상: `PCBW-R05 — Bounded Handoff` 및 `인계 계약(Handoff Contract)`
+- 변경 목적: 반복적으로 발생한 Project / 제목 / Role / Surface / Model / Reasoning 누락을 방지하고, 실행 환경을 생성하거나 이동하기 전에 필요한 라우팅 정보를 명확히 제공한다.
+- 승인 참조: `57 — PCBW Mandatory Routing Header Canonicalization & Main Merge`에 대한 권한 있는 Human의 명시적 실행 지시
+- 승인 범위: 라우팅 헤더 추가, PCBW-R05의 활성화 조건과 규칙 문구 보강, 기존 최소 인계 맥락 유지, 상위 Governance 및 Failure Reproduction Workflow 미변경, 특정 제품·모델을 Workflow taxonomy로 고정하지 않음
+- 실행 경계: `Edit → Verify → Commit → Merge main → Remote Synchronization`
 
 상위 Governance는 권한 있는 사람의 승인과 추적 가능성을 요구하며, 모든 Workflow에 별도 Conformance 파일을 요구하지 않는다. 기존 FRW의 Definition·Template·Conformance Record 구성을 새 Workflow에 자동 적용하지 않는다. 이 문서는 위 승인 범위 안에서 Design 55의 의미와 여섯 규칙을 검증하여 정본화했으며, v0.1의 산출물 최소화에 따라 별도 Conformance 파일을 만들지 않는다. AI는 승인 주체가 아니며 사용자가 제공한 승인을 대체하거나 확대하지 않았다.
