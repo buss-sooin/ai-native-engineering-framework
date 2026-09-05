@@ -1,0 +1,37 @@
+[
+  {
+    "id": "missing-routing-header",
+    "mutation": "remove_header_marker",
+    "expected_code": "ROUTING_HEADER_MISSING"
+  },
+  {
+    "id": "routing-header-after-body",
+    "mutation": "move_header_after_body",
+    "expected_code": "ROUTING_HEADER_NOT_FIRST"
+  },
+  {
+    "id": "role-surface-conflation",
+    "mutation": "role_surface_conflation",
+    "expected_code": "ROLE_SURFACE_CONFLATION"
+  },
+  {
+    "id": "incorrect-execution-surface",
+    "mutation": "incorrect_execution_surface",
+    "expected_code": "EXECUTION_SURFACE_MISMATCH"
+  },
+  {
+    "id": "result-directive-surface-mismatch",
+    "mutation": "surface_result_drift",
+    "expected_code": "EXECUTION_SURFACE_MISMATCH"
+  },
+  {
+    "id": "authority-meaning-strengthened",
+    "mutation": "strengthen_authority",
+    "expected_code": "AUTHORITY_MISMATCH"
+  },
+  {
+    "id": "required-handoff-context-omitted",
+    "mutation": "omit_verification_section",
+    "expected_code": "REQUIRED_HANDOFF_CONTEXT_MISSING"
+  }
+]

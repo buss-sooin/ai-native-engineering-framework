@@ -1,10 +1,12 @@
-# Collaboration Routing Engine v0
+# Collaboration Routing Engine v0 및 Operator-mediated Integration
 
-Status: Project-level Local Trial Implementation
+Status: Operator-mediated Project-level Local Trial Integration
 
 ## 목적과 승인 경계
 
 이 도구는 구조화된 필수 행위에서 필요한 역량과 실행 환경(Execution Surface)을 결정하고, 사람·AI 책임 및 실행 권한을 별도로 검증한다. 검증된 라우팅 결과(Routing Result)를 기계 소비용 계약으로 반환하며 `PASS`에서만 Markdown 지시문을 생성한다. 명령·Git 작업·런타임 조작을 실제 수행하지 않는다.
+
+승인된 통합 로컬 시험은 독립 구현된 Engine 앞뒤에 얇은 통합 어댑터(Integration Adapter)를 둔다. Adapter는 요청을 검증하고 기존 Engine과 Renderer를 순서대로 호출한 뒤, Renderer를 호출하지 않는 독립 지시문 검증기(Directive Validator)가 결과와 Markdown의 의미 일치를 확인한 경우에만 사람이 붙여 넣을 수 있는 지시문을 반환한다. 이는 ChatGPT-native mandatory interceptor가 아니라 운영자가 명시적으로 실행하는 프로젝트 수준 흐름이다.
 
 - 적용 프로젝트: `AI-Native Engineering Framework Lab`
 - 승인 설계: `62 — AI-Native Collaboration Routing Engine v0 Design`
@@ -14,6 +16,8 @@ Status: Project-level Local Trial Implementation
 - 시작 리비전: `d934887ce0530ef0ad6b775b42092903fc022002`
 - 반환 목적지: `00B — AI-Native Engineering Framework Control Plane`
 
+통합 로컬 시험의 추가 승인 설계는 `66 — AI-Native Collaboration Routing Engine v0 Integration Boundary Design`, 승인 참조는 `HG-66-01 — Collaboration Routing Integration Local Trial Implementation`, 구현 브랜치는 `feat/collaboration-routing-integration-v0`, 시작 리비전은 `bf71895f6183772005d3d76134df57be7399b60b`다. 이 승인은 standalone Engine의 판단 의미 변경을 허용하지 않는다.
+
 적용 정본은 [AI Engineering Guidelines](../../governance/AI-ENGINEERING-GUIDELINES.md)와 [Project Collaboration Bootstrap Workflow](../../workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md)다. 이 디렉터리의 코드·프로필·결과는 해당 문서를 대체하거나 Framework·Workflow 규칙을 변경하지 않는다. 한국어 문서는 [Technical Documentation Guidelines](../../governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md)를 따른다.
 
 ## 실행 방법
@@ -22,6 +26,10 @@ Python 3.8 이상의 표준 라이브러리만 사용한다. 외부 패키지 �
 
 ```sh
 python3 tools/collaboration-routing/src/cli.py route \
+  --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.1.0.json
+
+python3 tools/collaboration-routing/src/integration_cli.py \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
   --profile tools/collaboration-routing/profiles/framework-lab.v0.1.0.json
 
@@ -39,6 +47,8 @@ CLI는 표준 출력에 JSON 객체 하나를 반환한다. 종료 코드는 `PA
 | `result` | 유효한 입력으로 구성한 구조화된 결과. 입력 형식 오류나 검증기 오류 시 `null` |
 | `directive` | 검증된 `PASS` 지시문. 그 밖의 모든 경우 `null` |
 
+통합 CLI는 위 필드와 함께 `integration_status`, `directive_validation`, `emission_outcome`, `evidence`를 반환한다. `PASS + 독립 지시문 검증 PASS`만 `EMITTED`가 될 수 있다. Engine이 반환한 의미적 `FAIL`·`UNRESOLVED`는 `BLOCKED_BY_ROUTING`으로 보존한다. 요청 직렬화, Adapter, Engine 호출, Renderer 또는 Validator 장애와 결과·지시문 불일치는 별도의 `INTEGRATION_BLOCKED`이며 종료 코드 `3`을 사용한다. 이 상태는 Design 62의 Routing Result 상태를 확장하거나 바꾸지 않는다.
+
 `FAIL`·`UNRESOLVED`의 `result`에는 진단을 위한 실행 계획 후보가 남을 수 있다. 이 후보는 실행 가능한 지시문이 아니며 상태를 무시하고 소비해서는 안 된다.
 
 예제는 **읽기 전용 요청 형식 예시**다. 대상 문자열·상태·검증 책임자·리비전을 실제 값으로 교체해야 한다. 테스트의 승인 참조는 가상 데이터이며 실제 실행 승인이 아니다.
@@ -52,6 +62,17 @@ Structured Request → Schema Validation → Capability Resolution
  → PASS only → Renderer → Rendered Conformance
 ```
 
+통합 로컬 시험의 방출 흐름은 다음과 같다.
+
+```text
+Routing Request → Integration Adapter → Request Validation
+ → Existing Deterministic Engine → Validated Routing Result
+ → Existing Renderer → Independent Directive Validator
+ → PASS only → Human-visible Pasteable Directive
+```
+
+책임 경계는 분리되어 있다. standalone Routing Engine은 결정과 의미 상태를 소유한다. Adapter는 호출 순서와 방출 차단만 담당하며 경로·권한·추천을 선택하거나 덮어쓰지 않는다. Renderer는 검증된 결과를 Markdown으로 투영한다. 독립 Validator는 Renderer를 재호출하지 않고 헤더, 제목, 필수 인계 맥락, 실행 환경, 역할, 책임, 권한, 추천과 반환 목적지를 구조적으로 파싱해 Routing Result와 대조한다. 지시문은 사람에게 보이는 산출물일 뿐 실행이 아니며, downstream execution은 이 구현 범위 밖이다.
+
 | 파일 | 책임 |
 | --- | --- |
 | `schemas/routing-request.schema.json` | 필수 행위와 명시적 입력 상태 |
@@ -62,12 +83,28 @@ Structured Request → Schema Validation → Capability Resolution
 | `src/engine.py` | 라우팅, 책임 배분, 권한·경계 검증 및 내부 적합성 검사 |
 | `src/directive.py` | 결정론적 표현과 지시문 적합성 검증 |
 | `src/cli.py` | 로컬 입력 및 JSON 출력 |
-| `tests/fixtures/` | 예제 요청과 고정 회귀 A–G |
+| `src/directive_conformance.py` | Renderer와 독립적인 지시문 구조·의미 검증 |
+| `src/integration.py` | Engine 의미를 변경하지 않는 호출 조율과 fail-closed 방출 관문 |
+| `src/integration_cli.py` | 운영자 매개 통합 흐름의 로컬 JSON 입출력 |
+| `tests/fixtures/` | 예제 요청, 고정 회귀 A–I와 역사적 지시문 실패 fixture |
 | `tests/test_routing.py` | 정상·오류·변조·CLI 검증 |
+| `tests/test_integration.py` | 계약 보존, 역사적 실패, 장애 주입과 방출 차단 검증 |
 
 요구사항 추출(Requirement Extraction)은 호출자의 책임이다. Engine은 자연어 목표나 본문에서 명령을 추출하지 않으며 `required_actions[]`만 행위 판정의 입력으로 사용한다. 목표·행위·대상 간 자연어 의미의 정확성은 요청 작성자와 검토자가 확인해야 한다.
 
 `Routing Decision ≠ Authority`, `Routing Result ≠ Directive`, `Directive ≠ Execution`을 유지한다. 운반 어댑터(Execution Adapter)는 포함하지 않는다.
+
+통합 Adapter는 Routing Request의 자연어로 결정 필드를 다시 만들지 않는다. 실행 환경, 세션 역할, 책임, 권한 평가, 모델·추론 추천과 Route Leg는 검증된 Routing Result만 따른다. 목표와 설명 같은 맥락 값은 Engine이 보존한 `source_request`에서만 읽는다. `Available ≠ Selected ≠ Authorized`와 `Recommended ≠ Selected ≠ Authorized`를 유지한다.
+
+## 통합 실패 차단과 근거
+
+의미적 `FAIL`·`UNRESOLVED`는 기존 Engine의 진단과 해결 경로를 그대로 반환하고 Renderer를 호출하지 않는다. 통합 인프라 실패는 `INTEGRATION_BLOCKED`로 구분하며 유효한 `PASS` 결과가 없는 경우, Renderer가 실패한 경우 또는 독립 Validator가 거부한 경우 항상 `directive=null`이다. Adapter는 실패를 Engine의 의미 상태로 승격·강등하지 않고 승인이나 누락된 권한을 합성하지 않는다.
+
+통합 근거 메타데이터는 요청, 결과, 렌더링된 지시문과 Validator 결과의 SHA-256 지문, 요청·결과 ID 및 최종 방출 상태를 포함한다. 차단된 렌더링 결과는 실행 가능한 지시문 필드로 노출하지 않고 지문만 보존한다. 이 지문은 전자서명, 승인 또는 실행 권한이 아니며 Design 62 스키마에는 저장되지 않는다.
+
+역사적 실패 fixture는 누락·후치 Routing Header, Role/Surface 혼동, 잘못된 Surface, Result/Directive Surface 불일치, 권한 강화와 필수 인계 맥락 누락을 의도적으로 주입한다. Renderer가 평소 올바른 출력을 만든다는 사실과 별개로 독립 Validator가 각 변조를 거부하는지 검증한다.
+
+통합 구현 검증 시 전체 61개 테스트가 통과했다. 기존 standalone 49개와 통합 12개를 함께 실행했으며, Regression A–I, 정상 단일·AI/Human 복합 경로, 의미적 `FAIL`·`UNRESOLVED`, 통합 장애 주입, 계약 보존, 결과·지시문 drift, 독립 Validator 및 결정론적 근거 지문을 포함한다.
 
 ## 요청 계약과 명시적 상태
 
