@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0",
+  "id": "framework-lab",
+  "version": "0.1.0",
+  "project": "AI-Native Engineering Framework Lab",
+  "actions": [
+    {
+      "kind": "reason_context",
+      "capabilities": [
+        "context_reasoning"
+      ],
+      "effects": [
+        "READ_ONLY"
+      ],
+      "actor": "AI",
+      "authority_required": false,
+      "preferred_surfaces": [
+        "general-chat"
+      ]
+    },
+    {
+      "kind": "inspect_repository",
+      "capabilities": [
+        "repository_inspection"
+      ],
+      "effects": [
+        "READ_ONLY"
+      ],
+      "actor": "AI",
+      "authority_required": false,
+      "preferred_surfaces": [
+        "work-mode"
+      ]
+    },
+    {
+      "kind": "edit_document",
+      "capabilities": [
+        "document_edit"
+      ],
+      "effects": [
+        "ARTIFACT_WRITE"
+      ],
+      "actor": "AI",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "work-mode"
+      ]
+    },
+    {
+      "kind": "mutate_repository",
+      "capabilities": [
+        "repository_mutation"
+      ],
+      "effects": [
+        "REPOSITORY_MUTATION"
+      ],
+      "actor": "AI",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "codex"
+      ]
+    },
+    {
+      "kind": "git_branch",
+      "capabilities": [
+        "git_operation"
+      ],
+      "effects": [
+        "REPOSITORY_MUTATION"
+      ],
+      "actor": "AI",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "codex"
+      ]
+    },
+    {
+      "kind": "run_command",
+      "capabilities": [
+        "command_execution"
+      ],
+      "effects": [
+        "COMMAND_EXECUTION"
+      ],
+      "actor": "AI",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "codex"
+      ]
+    },
+    {
+      "kind": "run_tests",
+      "capabilities": [
+        "command_execution"
+      ],
+      "effects": [
+        "COMMAND_EXECUTION"
+      ],
+      "actor": "AI",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "codex"
+      ]
+    },
+    {
+      "kind": "observe_runtime",
+      "capabilities": [
+        "runtime_observation"
+      ],
+      "effects": [
+        "RUNTIME_OBSERVATION"
+      ],
+      "actor": "HUMAN",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "human-terminal"
+      ]
+    },
+    {
+      "kind": "mutate_runtime",
+      "capabilities": [
+        "runtime_mutation"
+      ],
+      "effects": [
+        "RUNTIME_MUTATION"
+      ],
+      "actor": "HUMAN",
+      "authority_required": true,
+      "preferred_surfaces": [
+        "human-terminal"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "general-chat",
+      "label": "ChatGPT 일반 Chat",
+      "actor": "AI",
+      "capabilities": [
+        "context_reasoning"
+      ],
+      "available": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": [
+        "READ_ONLY"
+      ]
+    },
+    {
+      "id": "work-mode",
+      "label": "ChatGPT Work mode",
+      "actor": "AI",
+      "capabilities": [
+        "repository_inspection",
+        "document_edit"
+      ],
+      "available": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": [
+        "READ_ONLY",
+        "ARTIFACT_WRITE"
+      ]
+    },
+    {
+      "id": "codex",
+      "label": "Codex Project / Session: ai-native-engineering-framework",
+      "actor": "AI",
+      "capabilities": [
+        "repository_mutation",
+        "git_operation",
+        "command_execution"
+      ],
+      "available": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": [
+        "READ_ONLY",
+        "ARTIFACT_WRITE",
+        "REPOSITORY_MUTATION",
+        "COMMAND_EXECUTION"
+      ]
+    },
+    {
+      "id": "human-terminal",
+      "label": "Human IDE / Terminal",
+      "actor": "HUMAN",
+      "capabilities": [
+        "runtime_observation",
+        "runtime_mutation"
+      ],
+      "available": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": [
+        "RUNTIME_OBSERVATION",
+        "RUNTIME_MUTATION"
+      ]
+    }
+  ]
+}

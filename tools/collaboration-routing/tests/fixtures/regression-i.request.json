@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "request_id": "regression-I",
+  "project": {
+    "state": "KNOWN",
+    "value": "AI-Native Engineering Framework Lab"
+  },
+  "title": {
+    "state": "KNOWN",
+    "value": "Repository inspection"
+  },
+  "objective": {
+    "state": "KNOWN",
+    "value": "Inspect the specified repository without changing it."
+  },
+  "destination_session_role": {
+    "state": "KNOWN",
+    "value": "Repository Reviewer"
+  },
+  "target": {
+    "state": "KNOWN",
+    "value": "repository at an explicitly supplied revision"
+  },
+  "current_state": {
+    "state": "KNOWN",
+    "value": "Inspection requested"
+  },
+  "current_gate": {
+    "state": "KNOWN",
+    "value": "Read-only review"
+  },
+  "canonical_authority": {
+    "state": "KNOWN",
+    "value": [
+      "governance/AI-ENGINEERING-GUIDELINES.md",
+      "workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md"
+    ]
+  },
+  "canonical_conflict": "CLEAR",
+  "profile": {
+    "id": "framework-lab",
+    "version": "0.1.0"
+  },
+  "required_actions": [
+    {
+      "id": "a0",
+      "kind": {
+        "state": "KNOWN",
+        "value": "run_command"
+      },
+      "actor": {
+        "state": "KNOWN",
+        "value": "AI"
+      },
+      "authority": "AUTHORIZED",
+      "target": {
+        "state": "KNOWN",
+        "value": "repository at an explicitly supplied revision"
+      },
+      "effects": {
+        "state": "KNOWN",
+        "value": [
+          "COMMAND_EXECUTION"
+        ]
+      },
+      "source_references": {
+        "state": "KNOWN",
+        "value": [
+          "fixture:run_command"
+        ]
+      },
+      "human_direct": {
+        "state": "KNOWN",
+        "value": false
+      },
+      "verification_requirement": {
+        "state": "KNOWN",
+        "value": [
+          "Verify run_command against the supplied target."
+        ]
+      },
+      "session_role": {
+        "state": "KNOWN",
+        "value": "AI Task Reviewer"
+      },
+      "approval_reference": {
+        "state": "KNOWN",
+        "value": "fixture-only human approval; not live authorization"
+      }
+    }
+  ],
+  "surface_selection": {
+    "state": "KNOWN",
+    "value": [
+      {
+        "action_id": "a0",
+        "surface_id": "codex"
+      }
+    ]
+  },
+  "approved_execution_boundary": {
+    "state": "KNOWN",
+    "value": {
+      "target": "repository at an explicitly supplied revision",
+      "allowed_action_ids": [
+        "a0"
+      ],
+      "allowed_effects": [
+        "READ_ONLY"
+      ]
+    }
+  },
+  "prohibited_actions": {
+    "state": "KNOWN",
+    "value": []
+  },
+  "responsibility": {
+    "decision_owner": {
+      "state": "KNOWN",
+      "value": "Project human owner"
+    },
+    "verification_owner": {
+      "state": "KNOWN",
+      "value": "Project human reviewer"
+    },
+    "continuation_authority": "NOT_REQUIRED"
+  },
+  "verification_contract": {
+    "state": "KNOWN",
+    "value": [
+      "Report inspected paths and revision with findings."
+    ]
+  },
+  "return_contract": {
+    "state": "KNOWN",
+    "value": "00B — AI-Native Engineering Framework Control Plane"
+  },
+  "stop_conditions": {
+    "state": "KNOWN",
+    "value": [
+      "Stop on canonical conflict or missing access."
+    ]
+  },
+  "evidence_requirement": {
+    "state": "KNOWN",
+    "value": [
+      "Record source paths and revision."
+    ]
+  },
+  "branch_revision_environment": {
+    "state": "NOT_REQUIRED"
+  }
+}

@@ -1,0 +1,85 @@
+[
+  {
+    "id": "A",
+    "kind": "inspect_repository",
+    "selected": "general-chat",
+    "expected": "FAIL",
+    "code": "SURFACE_CAPABILITY_MISMATCH"
+  },
+  {
+    "id": "B-git",
+    "kind": "git_branch",
+    "selected": "work-mode",
+    "expected": "FAIL",
+    "code": "HEADER_BODY_MISMATCH"
+  },
+  {
+    "id": "B-command",
+    "kind": "run_command",
+    "selected": "work-mode",
+    "expected": "FAIL",
+    "code": "SURFACE_CAPABILITY_MISMATCH"
+  },
+  {
+    "id": "B-test",
+    "kind": "run_tests",
+    "selected": "work-mode",
+    "expected": "FAIL",
+    "code": "SURFACE_CAPABILITY_MISMATCH"
+  },
+  {
+    "id": "C",
+    "kind": "inspect_repository",
+    "unavailable": "work-mode",
+    "expected": "UNRESOLVED",
+    "code": "REQUIRED_CAPABILITY_UNAVAILABLE"
+  },
+  {
+    "id": "D",
+    "kind": "inspect_repository",
+    "authority": "UNKNOWN",
+    "expected": "UNRESOLVED",
+    "code": "AUTHORITY_UNKNOWN"
+  },
+  {
+    "id": "E",
+    "kind": "inspect_repository",
+    "authority": "DENIED",
+    "expected": "FAIL",
+    "code": "AUTHORITY_DENIED"
+  },
+  {
+    "id": "F",
+    "kind": "inspect_repository",
+    "fault": "exception",
+    "expected": "UNRESOLVED",
+    "code": "VALIDATOR_ERROR"
+  },
+  {
+    "id": "G-surface",
+    "kind": "inspect_repository",
+    "drift": [
+      "ChatGPT Work mode",
+      "ChatGPT 일반 Chat"
+    ],
+    "expected": "FAIL",
+    "code": "MATERIAL_DIRECTIVE_DRIFT"
+  },
+  {
+    "id": "G-responsibility",
+    "kind": "inspect_repository",
+    "drift": [
+      "Project human reviewer",
+      "AI final approver"
+    ],
+    "expected": "FAIL",
+    "code": "MATERIAL_DIRECTIVE_DRIFT"
+  },
+  {
+    "id": "H",
+    "kind": "reason_context",
+    "request_file": "regression-h.request.json",
+    "expected": "FAIL",
+    "code": "SURFACE_EFFECT_MISMATCH"
+  }
+]

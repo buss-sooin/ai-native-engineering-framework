@@ -1,0 +1,3424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:collaboration-routing:routing-result:1.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ]
+    },
+    "routing_result_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "routing_status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "UNRESOLVED"
+      ]
+    },
+    "project": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "destination_session_role": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "route_mode": {
+      "enum": [
+        "SINGLE",
+        "COMPOSITE",
+        "UNSELECTED"
+      ]
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "feasible_surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surface_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "action_id",
+          "surface_ids"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "execution_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surface_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surface_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actor": {
+            "enum": [
+              "AI",
+              "HUMAN"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "READ_ONLY",
+                "ARTIFACT_WRITE",
+                "REPOSITORY_MUTATION",
+                "COMMAND_EXECUTION",
+                "RUNTIME_OBSERVATION",
+                "RUNTIME_MUTATION",
+                "EXTERNAL_SIDE_EFFECT"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "leg_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_role": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "KNOWN"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "state",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "UNKNOWN"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_REQUIRED"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "execution_surface": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "assigned_actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "actor": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "enum": [
+                            "AI",
+                            "HUMAN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "authority": {
+                  "enum": [
+                    "AUTHORIZED",
+                    "DENIED",
+                    "UNKNOWN",
+                    "NOT_REQUIRED"
+                  ]
+                },
+                "approval_reference": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "target": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "effects": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "array",
+                          "items": {
+                            "enum": [
+                              "READ_ONLY",
+                              "ARTIFACT_WRITE",
+                              "REPOSITORY_MUTATION",
+                              "COMMAND_EXECUTION",
+                              "RUNTIME_OBSERVATION",
+                              "RUNTIME_MUTATION",
+                              "EXTERNAL_SIDE_EFFECT"
+                            ]
+                          },
+                          "minItems": 1,
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "source_references": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "minItems": 1,
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "human_direct": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "verification_requirement": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "minItems": 1,
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "session_role": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "UNKNOWN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "actor",
+                "authority",
+                "approval_reference",
+                "target",
+                "effects",
+                "source_references",
+                "human_direct",
+                "verification_requirement",
+                "session_role"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "effect_conformance": {
+            "type": "object",
+            "properties": {
+              "required_effects": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "READ_ONLY",
+                    "ARTIFACT_WRITE",
+                    "REPOSITORY_MUTATION",
+                    "COMMAND_EXECUTION",
+                    "RUNTIME_OBSERVATION",
+                    "RUNTIME_MUTATION",
+                    "EXTERNAL_SIDE_EFFECT"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "supported_effects": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "READ_ONLY",
+                    "ARTIFACT_WRITE",
+                    "REPOSITORY_MUTATION",
+                    "COMMAND_EXECUTION",
+                    "RUNTIME_OBSERVATION",
+                    "RUNTIME_MUTATION",
+                    "EXTERNAL_SIDE_EFFECT"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "status": {
+                "enum": [
+                  "PASS",
+                  "UNKNOWN"
+                ]
+              }
+            },
+            "required": [
+              "required_effects",
+              "supported_effects",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "authority_status": {
+            "enum": [
+              "AUTHORIZED",
+              "DENIED",
+              "UNKNOWN",
+              "NOT_REQUIRED"
+            ]
+          },
+          "model_recommendation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reasoning_recommendation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "action_id",
+          "kind",
+          "surface_id",
+          "surface_label",
+          "actor",
+          "capabilities",
+          "effects",
+          "leg_id",
+          "session_role",
+          "execution_surface",
+          "assigned_actions",
+          "required_capabilities",
+          "effect_conformance",
+          "authority_status",
+          "model_recommendation",
+          "reasoning_recommendation"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "rejected_alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surface_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "action_id",
+          "surface_id",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "responsibility_allocation": {
+      "type": "object",
+      "properties": {
+        "decision_owner": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "verification_owner": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "continuation_authority": {
+          "enum": [
+            "AUTHORIZED",
+            "DENIED",
+            "UNKNOWN",
+            "NOT_REQUIRED"
+          ]
+        },
+        "execution": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actor": {
+                "enum": [
+                  "AI",
+                  "HUMAN"
+                ]
+              },
+              "surface_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action_id",
+              "actor",
+              "surface_id"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "decision_owner",
+        "verification_owner",
+        "continuation_authority",
+        "execution"
+      ],
+      "additionalProperties": false
+    },
+    "authority_assessment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "AUTHORIZED",
+              "DENIED",
+              "UNKNOWN",
+              "NOT_REQUIRED"
+            ]
+          },
+          "approval_reference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "KNOWN"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "state",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "UNKNOWN"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_REQUIRED"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "input_status": {
+            "enum": [
+              "AUTHORIZED",
+              "DENIED",
+              "UNKNOWN",
+              "NOT_REQUIRED"
+            ]
+          }
+        },
+        "required": [
+          "action_id",
+          "status",
+          "approval_reference",
+          "input_status"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "approved_execution_boundary": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "allowed_action_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                },
+                "allowed_effects": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "READ_ONLY",
+                      "ARTIFACT_WRITE",
+                      "REPOSITORY_MUTATION",
+                      "COMMAND_EXECUTION",
+                      "RUNTIME_OBSERVATION",
+                      "RUNTIME_MUTATION",
+                      "EXTERNAL_SIDE_EFFECT"
+                    ]
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "target",
+                "allowed_action_ids",
+                "allowed_effects"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "prohibited_actions": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 0,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "verification_contract": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "return_contract": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "KNOWN"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "model_recommendation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "surface_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "surface_id",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "reasoning_recommendation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "surface_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "surface_id",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "routing_profile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "validator_version": {
+      "enum": [
+        "0.1.0"
+      ]
+    },
+    "failure_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "unresolved_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "code",
+          "detail"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "resolution_action": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "INPUT_COMPLETION",
+              "ENVIRONMENT_RESOLUTION",
+              "HUMAN_RESOLUTION",
+              "HUMAN_GATE",
+              "REVALIDATE",
+              "INTERNAL_RESOLUTION"
+            ]
+          },
+          "causes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "kind",
+          "causes",
+          "instruction"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "semantic_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_request": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "urn:collaboration-routing:routing-request:1.0",
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "enum": [
+            "1.0"
+          ]
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "title": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "objective": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "destination_session_role": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "current_state": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "current_gate": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "canonical_authority": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "canonical_conflict": {
+          "enum": [
+            "CLEAR",
+            "CONFLICT",
+            "UNKNOWN"
+          ]
+        },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "version"
+          ],
+          "additionalProperties": false
+        },
+        "required_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "actor": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "enum": [
+                          "AI",
+                          "HUMAN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "authority": {
+                "enum": [
+                  "AUTHORIZED",
+                  "DENIED",
+                  "UNKNOWN",
+                  "NOT_REQUIRED"
+                ]
+              },
+              "approval_reference": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "effects": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "READ_ONLY",
+                            "ARTIFACT_WRITE",
+                            "REPOSITORY_MUTATION",
+                            "COMMAND_EXECUTION",
+                            "RUNTIME_OBSERVATION",
+                            "RUNTIME_MUTATION",
+                            "EXTERNAL_SIDE_EFFECT"
+                          ]
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "source_references": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "human_direct": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "verification_requirement": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "session_role": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "actor",
+              "authority",
+              "approval_reference",
+              "target",
+              "effects",
+              "source_references",
+              "human_direct",
+              "verification_requirement",
+              "session_role"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "surface_selection": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "action_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "surface_id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "action_id",
+                      "surface_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "approved_execution_boundary": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "target": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "allowed_action_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 0,
+                      "uniqueItems": true
+                    },
+                    "allowed_effects": {
+                      "type": "array",
+                      "items": {
+                        "enum": [
+                          "READ_ONLY",
+                          "ARTIFACT_WRITE",
+                          "REPOSITORY_MUTATION",
+                          "COMMAND_EXECUTION",
+                          "RUNTIME_OBSERVATION",
+                          "RUNTIME_MUTATION",
+                          "EXTERNAL_SIDE_EFFECT"
+                        ]
+                      },
+                      "minItems": 0,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "target",
+                    "allowed_action_ids",
+                    "allowed_effects"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "prohibited_actions": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "responsibility": {
+          "type": "object",
+          "properties": {
+            "decision_owner": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "KNOWN"
+                      ]
+                    },
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "UNKNOWN"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "NOT_REQUIRED"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "verification_owner": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "KNOWN"
+                      ]
+                    },
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "UNKNOWN"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "NOT_REQUIRED"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "continuation_authority": {
+              "enum": [
+                "AUTHORIZED",
+                "DENIED",
+                "UNKNOWN",
+                "NOT_REQUIRED"
+              ]
+            }
+          },
+          "required": [
+            "decision_owner",
+            "verification_owner",
+            "continuation_authority"
+          ],
+          "additionalProperties": false
+        },
+        "verification_contract": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "return_contract": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "stop_conditions": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "evidence_requirement": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "branch_revision_environment": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "KNOWN"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "state",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "NOT_REQUIRED"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "project",
+        "title",
+        "objective",
+        "destination_session_role",
+        "target",
+        "current_state",
+        "current_gate",
+        "canonical_authority",
+        "canonical_conflict",
+        "profile",
+        "required_actions",
+        "surface_selection",
+        "approved_execution_boundary",
+        "prohibited_actions",
+        "responsibility",
+        "verification_contract",
+        "return_contract",
+        "stop_conditions",
+        "evidence_requirement",
+        "branch_revision_environment"
+      ],
+      "additionalProperties": false
+    },
+    "source_profile": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "urn:collaboration-routing:project-routing-profile:1.0",
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "enum": [
+            "1.0"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "READ_ONLY",
+                    "ARTIFACT_WRITE",
+                    "REPOSITORY_MUTATION",
+                    "COMMAND_EXECUTION",
+                    "RUNTIME_OBSERVATION",
+                    "RUNTIME_MUTATION",
+                    "EXTERNAL_SIDE_EFFECT"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "actor": {
+                "enum": [
+                  "AI",
+                  "HUMAN"
+                ]
+              },
+              "authority_required": {
+                "type": "boolean"
+              },
+              "preferred_surfaces": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "kind",
+              "capabilities",
+              "effects",
+              "actor",
+              "authority_required",
+              "preferred_surfaces"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actor": {
+                "enum": [
+                  "AI",
+                  "HUMAN"
+                ]
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "available": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "UNKNOWN"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "model_recommendation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reasoning_recommendation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "supported_effects": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "READ_ONLY",
+                    "ARTIFACT_WRITE",
+                    "REPOSITORY_MUTATION",
+                    "COMMAND_EXECUTION",
+                    "RUNTIME_OBSERVATION",
+                    "RUNTIME_MUTATION",
+                    "EXTERNAL_SIDE_EFFECT"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "actor",
+              "capabilities",
+              "available",
+              "model_recommendation",
+              "reasoning_recommendation",
+              "supported_effects"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "version",
+        "project",
+        "actions",
+        "surfaces"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "routing_result_id",
+    "request_id",
+    "routing_status",
+    "project",
+    "destination_session_role",
+    "route_mode",
+    "required_capabilities",
+    "feasible_surfaces",
+    "execution_plan",
+    "rejected_alternatives",
+    "responsibility_allocation",
+    "authority_assessment",
+    "approved_execution_boundary",
+    "prohibited_actions",
+    "verification_contract",
+    "return_contract",
+    "model_recommendation",
+    "reasoning_recommendation",
+    "routing_profile",
+    "validator_version",
+    "failure_codes",
+    "unresolved_issues",
+    "resolution_action",
+    "semantic_fingerprint",
+    "source_request",
+    "source_profile"
+  ],
+  "additionalProperties": false
+}
