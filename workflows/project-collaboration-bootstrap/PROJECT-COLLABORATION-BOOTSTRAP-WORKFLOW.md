@@ -112,6 +112,45 @@ UI의 Section 같은 조직화·그룹화 기능은 작업을 묶어 보여주�
 
 AI가 기술적으로 수행할 수 있다는 이유만으로 사람의 직접 작업을 제거하지 않는다. 사람 직접 수행, AI 자문, AI 분석 후 사람 실행, 제한된 AI 실행 등은 협업 선택지이며 성숙도 계층이 아니다. 자동화 수준이나 AI 사용량 자체를 더 나은 협업의 기준으로 삼지 않는다.
 
+### AI 실행 연속성과 사람 개입 경계(AI Execution Continuity / Human Interruption Boundary)
+
+PCBW가 활성화되어 사람과 AI 사이의 실행 책임 또는 실행 환경을 배정·재배정할 때 다음 순서로 판단한다.
+
+`Required Action → Required Capability → Human Involvement Necessity → Feasible Execution Surface → Responsibility Fit → Authority → Execute / Route`
+
+승인된 실행 경계 안에서 적절하고 권한 있는 AI 실행 환경이 수행할 수 있는 결정론적 작업을 현재 AI 환경에 필요한 역량이 없다는 이유만으로 사람에게 위임하지 않는다. 현재 환경의 역량 부족은 PCBW-R06의 영향 부분 재평가(Targeted Re-evaluation)를 활성화한다. 필요한 역량을 식별하고, 가능한 AI 실행 환경과 해당 환경의 권한을 확인한 뒤 사람의 직접 실행이 실제로 필요한지 판단한다.
+
+`Current AI Surface cannot execute ≠ Human must execute`
+
+사람은 누락된 AI 도구 어댑터, 명령 전달자, 반복 폴링 수행자 또는 기본 근거 수집자가 아니다. 이 경계는 결정론적 명령 실행, 사전 점검, 반복 상태 폴링, 상태·근거 수집, 명시적 술어 평가, 결정론적 정합성 확인, 테스트·검증 실행과 경계가 정해진 술어 기반 상태 전이에 적용할 수 있다.
+
+사람의 직접 실행을 선택할 때는 다음 사람 필요성 근거(Human Necessity Basis) 중 실제 판단 근거를 명시한다.
+
+- `HUMAN_AUTHORITY_REQUIRED`
+- `DIRECT_HUMAN_OBSERVATION_OBJECTIVE`
+- `HUMAN_RISK_CONTROL_REQUIRED`
+- `HUMAN_LEARNING_OBJECTIVE`
+- `HUMAN_EXECUTION_SIMPLER_OR_SAFER`
+- `NO_SUITABLE_AUTHORIZED_AI_SURFACE`
+
+`NO_SUITABLE_AUTHORIZED_AI_SURFACE`는 필요 역량 식별, 가능한 AI 실행 환경 평가와 권한 확인을 포함한 영향 부분 재평가가 수행되었고 적합하고 권한 있는 AI 실행 환경이 없음을 확인한 경우에만 유효하다. 현재 Chat에 shell 또는 명령 실행 역량이 없다는 사실만으로는 이 근거가 성립하지 않는다.
+
+이 규칙은 PCBW-R04를 약화하지 않는다. 사람의 권한이 필요하거나, 직접 런타임 관측이 엔지니어링 목표이거나, 사람의 위험 통제·학습이 필요하거나, 사람 실행이 실질적으로 더 단순·안전하거나, 재평가 후에도 적합하고 권한 있는 AI 실행 환경이 없는 경우 사람의 직접 엔지니어링 수행은 유효하다. 사람 수행과 AI 수행 사이에 성숙도 계층을 두지 않는다.
+
+사람의 직접 실행을 포함하는 재사용 가능한 인계·실행 지시문은 내부 Workflow 식별자만 나열하지 않고 다음 운영 의미를 보존한다.
+
+- 사람의 목표(Human Goal)
+- 사람 필요성 근거(Human Necessity Basis)
+- 주 운영 인터페이스 또는 도구(Primary Operational Interface / Tool)
+- 관측 대상(What to Observe)
+- 사람의 판단 사항(Human Decision Required)
+- 기대 해석(Expected Interpretation)
+- 적용 가능한 경우 CLI 또는 저수준 대체 절차
+
+GUI를 절대 우선하지 않는다. 직접 런타임 관측이 목적일 때는 DB client, Redis·Kafka 검사 도구, 모니터링 dashboard처럼 운영 이해를 높이는 인터페이스를 선택할 수 있고 CLI도 적합한 경우 사용할 수 있다.
+
+재사용 가능한 라우팅 지시문의 결정론적 검증 경계에서는 사람 실행 선택에 사람 필요성 근거가 없으면 `UNRESOLVED`, 결정론적 행위를 사람에게 배정하면서 유효한 사람 필요성이 없고 적합하고 권한 있는 AI 환경이 존재하면 `FAIL`, `NO_SUITABLE_AUTHORIZED_AI_SURFACE`를 주장하면서 영향 부분 재평가가 확인되지 않으면 `UNRESOLVED`, 사람 대상 운영 의미가 불충분하면 `FAIL`로 판정한다. `PASS`만 지시문을 방출하며 `FAIL`과 `UNRESOLVED`는 방출을 차단한다. 표현 계층의 경고만으로 이 검증을 대체하지 않는다.
+
 ### 협업 조율 책임과 전담 Control Plane
 
 여러 역할이나 실행 환경을 연결하는 협업에는 필요한 수준의 조율 책임이 명확해야 한다. 조율 책임은 현재 상태(Current State), 현재 관문(Current Gate), 다음 책임, 인계 목적지와 반환·종료 목적지를 추적할 수 있다.
@@ -225,7 +264,7 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 
 ## 규칙과 의무(Rules and Obligations)
 
-아래 여섯 규칙의 범위는 모두 `Workflow`다. 의무(Obligation)와 활성화 조건(Activation Condition)을 분리하며 앞의 운영 설명은 이 규칙들을 구체화한다.
+아래 일곱 규칙의 범위는 모두 `Workflow`다. 의무(Obligation)와 활성화 조건(Activation Condition)을 분리하며 앞의 운영 설명은 이 규칙들을 구체화한다.
 
 | Rule ID / 이름 | Scope | Obligation | Activation condition | 규칙 |
 | --- | --- | --- | --- | --- |
@@ -235,6 +274,7 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 | PCBW-R04 — Human Direct Engineering | Workflow | Mandatory | Workflow 활성화 시 | 사람의 직접 엔지니어링 수행(Human Direct Engineering)이 이해·판단·학습·위험 통제 또는 실행 단순성에 더 적합하면 정상적인 실행 선택지로 선택할 수 있다. AI 역량의 존재만으로 사람의 직접 작업을 제거하지 않는다. |
 | PCBW-R05 — Bounded Handoff | Workflow | Conditional | 역할·실행 환경 사이의 인계 또는 맥락·권한·책임 손실 위험이 있는 인계가 발생하거나, 새로운 Session / Work / 실행 세션으로 사용자를 라우팅하거나 재사용 가능한 실행 지시문을 제공하는 경우 | 다음 책임자가 현재 상태, 실행 경계, 검증 요구와 반환 목적지를 추측하지 않도록 인계 계약(Handoff Contract)의 맥락을 보존한다. 역량·변경 권한·실행 의미가 다른 환경으로 이동할 때 세션 역할(Session Role)과 실행 환경(Execution Surface)을 각각 명시하며 일반적인 `Chat` 표현만으로 목적지를 지정하지 않는다. 새로운 실행 환경으로 Routing하거나 재사용 가능한 실행 지시문을 제공할 때는 상세 지시문보다 먼저 프로젝트 / 작업 공간(Project / Workspace), 권장 Session / Work 제목(Recommended Session / Work Title), 목적지 세션 역할(Destination Session Role), 실행 환경(Execution Surface), 권장 모델(Recommended Model), 권장 추론 수준(Recommended Reasoning Level)을 포함한 라우팅 헤더(Routing Header)를 제공한다. 모델 또는 추론 수준이 해당 실행 환경에서 사용자 선택 대상이 아니면 `Surface-managed / N/A`로 식별한다. 추천은 선택이나 실행 권한을 의미하지 않으며 `Recommended ≠ Selected ≠ Authorized`를 유지한다. |
 | PCBW-R06 — Targeted Re-evaluation | Workflow | Conditional | 엔지니어링 의도, Workflow, 실행 환경, 역량 가용성, 권한·접근, 위험, 검증 또는 협업 효과에 실질적 변화 발생 시 | 영향을 받은 초기 구성 판단을 필요한 수준에서 재평가한다. 재평가 자체는 새 사람 승인 관문(Human Gate)을 뜻하지 않으며 승인 경계 변경 여부는 상위 Governance에 따라 별도 판단한다. |
+| PCBW-R07 — AI Execution Continuity / Human Interruption Boundary | Workflow | Mandatory | PCBW가 활성화되고 사람과 AI 사이의 실행 책임 또는 실행 환경을 배정하거나 재배정할 때 | 승인된 실행 경계 안에서 적절하고 권한 있는 AI 실행 환경이 수행할 수 있는 결정론적 작업을 현재 AI 환경의 역량 부족만으로 사람에게 위임하지 않는다. PCBW-R06에 따라 가능한 AI 실행 환경과 권한을 재평가한 뒤 사람 실행의 실제 필요성을 판단한다. 사람 실행을 선택하면 사람 필요성 근거와 사람 대상 운영 의미를 명시한다. 사람 필요성 근거 누락 또는 `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에 필요한 영향 부분 재평가 미확인은 `UNRESOLVED`, 유효한 사람 필요성 없이 적합하고 권한 있는 AI 환경이 존재하는 결정론적 사람 위임 또는 불충분한 사람 대상 운영 의미는 `FAIL`이며, 두 상태 모두 재사용 가능한 라우팅 지시문 방출을 차단한다. PCBW-R04의 정당한 사람 직접 엔지니어링 수행은 유지한다. |
 
 ## 승인과 정본화 근거
 
@@ -250,4 +290,12 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 - 승인 범위: 라우팅 헤더 추가, PCBW-R05의 활성화 조건과 규칙 문구 보강, 기존 최소 인계 맥락 유지, 상위 Governance 및 Failure Reproduction Workflow 미변경, 특정 제품·모델을 Workflow taxonomy로 고정하지 않음
 - 실행 경계: `Edit → Verify → Commit → Merge main → Remote Synchronization`
 
-상위 Governance는 권한 있는 사람의 승인과 추적 가능성을 요구하며, 모든 Workflow에 별도 Conformance 파일을 요구하지 않는다. 기존 FRW의 Definition·Template·Conformance Record 구성을 새 Workflow에 자동 적용하지 않는다. 이 문서는 위 승인 범위 안에서 Design 55의 의미와 여섯 규칙을 검증하여 정본화했으며, v0.1의 산출물 최소화에 따라 별도 Conformance 파일을 만들지 않는다. AI는 승인 주체가 아니며 사용자가 제공한 승인을 대체하거나 확대하지 않았다.
+이후 AI 실행 연속성과 사람 개입 경계 변경은 다음 범위와 근거에 따라 정본화했다.
+
+- 변경 대상: `PCBW-R07 — AI Execution Continuity / Human Interruption Boundary`, 사람의 직접 엔지니어링 수행과 영향 부분 재평가의 연결, 재사용 가능한 사람 실행 지시문의 운영 의미
+- 변경 목적: 현재 AI 환경의 역량 부족을 사람의 명령 전달 책임으로 잘못 전환하는 경로를 차단하면서 PCBW-R04의 정당한 사람 직접 수행을 보존한다.
+- 승인 설계: `67 — PCBW AI Execution Continuity & Human Interruption Boundary Design`
+- 승인 참조: `HG-67-01 = PASS`
+- 승인 범위: Workflow 규칙 정본화, 기존 Collaboration Routing Engine의 결정론적 방출 관문 연계와 회귀 검증. 상위 Governance, Failure Reproduction Workflow, Reproduction Record Template과 자동 orchestration은 변경하지 않는다.
+
+상위 Governance는 권한 있는 사람의 승인과 추적 가능성을 요구하며, 모든 Workflow에 별도 Conformance 파일을 요구하지 않는다. 기존 FRW의 Definition·Template·Conformance Record 구성을 새 Workflow에 자동 적용하지 않는다. 이 문서는 위 승인 범위 안에서 Design 55와 Design 67의 의미 및 일곱 규칙을 검증하여 정본화했으며, v0.1의 산출물 최소화에 따라 별도 Conformance 파일을 만들지 않는다. AI는 승인 주체가 아니며 사용자가 제공한 승인을 대체하거나 확대하지 않았다.

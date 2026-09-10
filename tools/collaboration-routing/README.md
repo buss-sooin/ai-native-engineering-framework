@@ -18,6 +18,8 @@ Status: Operator-mediated Project-level Local Trial Integration
 
 통합 로컬 시험의 추가 승인 설계는 `66 — AI-Native Collaboration Routing Engine v0 Integration Boundary Design`, 승인 참조는 `HG-66-01 — Collaboration Routing Integration Local Trial Implementation`, 구현 브랜치는 `feat/collaboration-routing-integration-v0`, 시작 리비전은 `bf71895f6183772005d3d76134df57be7399b60b`다. 이 승인은 standalone Engine의 판단 의미 변경을 허용하지 않는다.
 
+PCBW-R07 집행 확장의 승인 설계는 `67 — PCBW AI Execution Continuity & Human Interruption Boundary Design`, 승인 참조는 `HG-67-01 = PASS`다. 승인 범위는 PCBW-R07 정본화, 기존 action 계약의 최소 확장, 결정론적 사람 위임 판정과 기존 PASS-only 방출 관문의 연계다. 상위 Governance, Failure Reproduction Workflow, 자동 orchestration과 실행 어댑터는 범위에 포함하지 않는다.
+
 적용 정본은 [AI Engineering Guidelines](../../governance/AI-ENGINEERING-GUIDELINES.md)와 [Project Collaboration Bootstrap Workflow](../../workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md)다. 이 디렉터리의 코드·프로필·결과는 해당 문서를 대체하거나 Framework·Workflow 규칙을 변경하지 않는다. 한국어 문서는 [Technical Documentation Guidelines](../../governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md)를 따른다.
 
 ## 실행 방법
@@ -27,11 +29,11 @@ Python 3.8 이상의 표준 라이브러리만 사용한다. 외부 패키지 �
 ```sh
 python3 tools/collaboration-routing/src/cli.py route \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.1.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
 
 python3 tools/collaboration-routing/src/integration_cli.py \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.1.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
 
 python3 -m unittest discover -s tools/collaboration-routing/tests -v
 ```
@@ -78,7 +80,7 @@ Routing Request → Integration Adapter → Request Validation
 | `schemas/routing-request.schema.json` | 필수 행위와 명시적 입력 상태 |
 | `schemas/project-routing-profile.schema.json` | 프로젝트의 행위·역량·환경 매핑 |
 | `schemas/routing-result.schema.json` | 기계 소비용 결과 계약 |
-| `profiles/framework-lab.v0.1.0.json` | Framework Lab의 버전 지정 매핑과 가용성 선언 |
+| `profiles/framework-lab.v0.2.0.json` | Framework Lab의 PCBW-R07을 포함한 버전 지정 매핑과 가용성 선언 |
 | `src/schema_validation.py` | 번들 스키마에서 사용하는 JSON Schema 부분집합 검증 |
 | `src/engine.py` | 라우팅, 책임 배분, 권한·경계 검증 및 내부 적합성 검사 |
 | `src/directive.py` | 결정론적 표현과 지시문 적합성 검증 |
@@ -120,7 +122,7 @@ Routing Request → Integration Adapter → Request Validation
 
 중단 조건·근거 요구·브랜치/리비전/환경은 적용되지 않을 때 `NOT_REQUIRED`를 허용한다. 적용 여부를 아직 모르는 `UNKNOWN`은 보수적으로 `UNRESOLVED`다. `surface_selection=NOT_REQUIRED`는 명시적 선택 없이 프로필로 선택하라는 뜻이다. `KNOWN`이면 모든 action ID를 한 번씩 지정해야 한다.
 
-각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. 새 상태 필드도 `UNKNOWN`이면 미확정, `NOT_REQUIRED`이면 필수 계약 위반으로 처리한다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 행위 종류와 AI/HUMAN 책임은 프로필과 대조한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
+각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수이며, 누락도 Engine의 `UNRESOLVED` 또는 `FAIL` 판정 대상이다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
 
 프로필 요청은 정확한 ID·버전으로 지정한다. 다른 버전이 제공되면 `PROFILE_VERSION_UNAVAILABLE`이며 암묵적으로 최신 버전으로 교체하지 않는다. 정본 충돌 상태는 `CLEAR / CONFLICT / UNKNOWN`으로 구분하며, 충돌 또는 미확정은 `CANONICAL_CONFLICT`로 반환한다.
 
@@ -141,7 +143,7 @@ Routing Request → Integration Adapter → Request Validation
 
 프로필은 Local Trial에 제공된 개념적 환경 매핑과 가용성 선언이다. 실제 제품 접근·계정 권한·접속 상태를 탐지한 결과가 아니다. 호출자는 현재 환경의 가용성을 확인하고 변경한 프로필은 새 버전으로 관리해야 한다. 모델·추론 추천은 이 시험 프로필에서 `Surface-managed / N/A`로 두며 특정 모델 선택 알고리즘은 포함하지 않는다.
 
-환경은 행위에 필요한 **모든** 역량과 effect, AI/HUMAN 책임 및 `KNOWN true` 가용성을 충족해야 후보가 된다. `required_capabilities ⊆ surface.capabilities`와 `required_effects ⊆ surface.supported_effects`는 독립적으로 검사한다. 둘 다 위반하면 두 진단을 보존한다. 권한이 `AUTHORIZED`라도 `SURFACE_EFFECT_MISMATCH`를 면제하지 않는다. 실효 effect는 프로필의 행위별 최소 effect와 요청의 명시적 effect를 합친 값이다. 요청이 최소 effect를 지우거나 추가 변경 effect의 권한 검사를 우회할 수 없다. 후보 중 명시적 선택이 있으면 이를 검증한다. 없으면 프로필의 `preferred_surfaces` 순서를 동률 해소 기준으로 사용한다. 선호 후보가 없을 때 유일한 적합 후보만 선택하며 여러 후보가 남으면 `AMBIGUOUS_SURFACE_SELECTION`이다. 필요한 역량을 갖추지 못한 환경으로의 하향 대체는 없다.
+환경은 행위에 필요한 **모든** 역량과 effect, 요청에서 선택한 AI/HUMAN 책임 및 `KNOWN true` 가용성을 충족해야 후보가 된다. 프로필 action의 `actor`는 기본 책임이며, 정당한 사람 직접 수행을 선택할 때는 동일한 역량·effect 계약을 유지한 채 `actor=HUMAN`으로 재배정할 수 있다. `required_capabilities ⊆ surface.capabilities`와 `required_effects ⊆ surface.supported_effects`는 독립적으로 검사한다. 둘 다 위반하면 두 진단을 보존한다. 권한이 `AUTHORIZED`라도 `SURFACE_EFFECT_MISMATCH`를 면제하지 않는다. 실효 effect는 프로필의 행위별 최소 effect와 요청의 명시적 effect를 합친 값이다. 요청이 최소 effect를 지우거나 추가 변경 effect의 권한 검사를 우회할 수 없다. 후보 중 명시적 선택이 있으면 이를 검증한다. 없으면 프로필의 `preferred_surfaces` 순서를 동률 해소 기준으로 사용한다. 선호 후보가 없을 때 유일한 적합 후보만 선택하며 여러 후보가 남으면 `AMBIGUOUS_SURFACE_SELECTION`이다. 필요한 역량을 갖추지 못한 환경으로의 하향 대체는 없다.
 
 계획은 요청의 행위 순서를 보존한다. v0의 각 실행 구간(Route Leg)은 행위 하나를 배정하며 `leg_id=leg-<action id>`를 사용한다. 각 구간에 `actor`, `session_role`, `execution_surface`, 원본 행위 전체를 담은 `assigned_actions`, `required_capabilities`, `effect_conformance`, `authority_status`, `model_recommendation`, `reasoning_recommendation`을 보존한다. `effect_conformance`의 `PASS`는 effect 적합성만 의미하며 실행 권한은 `authority_status`로 별도 확인한다. 이전의 `action_id`, `kind`, `surface_id`, `surface_label`, `capabilities`, `effects`는 조회용 투영으로 유지하고 내부 적합성 검사에서 상세 계약과 대조한다. 선택 환경이 하나면 `SINGLE`, 둘 이상이면 `COMPOSITE`이며, 미완성 계획은 `UNSELECTED`다. 복합 계획은 AI와 사람의 실행 책임을 각각 보존한다. 작업 의존성 스케줄링, 병렬 실행과 자동 인계는 하지 않는다.
 
@@ -159,6 +161,21 @@ Routing Request → Integration Adapter → Request Validation
 - `prohibited_actions`는 action ID, 등록 행위 종류 또는 effect와 정확히 대조한다. 일치하면 `PROHIBITED_ACTION`이다. 자연어 금지 조건의 의미 분석은 하지 않는다.
 
 의사결정 책임자와 검증 책임자는 요청에서 보존하고, 실행 책임은 각 계획 단계의 AI/HUMAN 및 환경으로 배분한다. `continuation_authority`는 후속 실행의 상태다. `DENIED`·`NOT_REQUIRED`는 현재 요청 밖의 후속 실행을 허용하지 않는 상태로 보존한다. `UNKNOWN`은 인계 권한을 확정할 수 없으므로 `UNRESOLVED`다. 사람의 최종 책임을 AI에 이전하는 자동 승인 기능은 없다.
+
+## PCBW-R07 사람 위임 집행
+
+프로필 action의 `deterministic`은 사람 위임 경계를 평가하는 입력이다. 사람이 선택된 경우 Engine은 요청된 역량·effect를 만족하는 `KNOWN true` AI 환경과 확정된 권한을 독립적으로 대조한다. 현재 표면의 역량 부족을 사람이 입력한 주장으로 신뢰하지 않고 전체 프로젝트 프로필에서 적합한 AI 환경을 계산한다.
+
+| 조건 | 판정 |
+| --- | --- |
+| 사람 실행 + `human_necessity_basis` 미확정 | `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` |
+| `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 재평가 미확인 | `UNRESOLVED / TARGETED_RE_EVALUATION_NOT_ESTABLISHED` |
+| 결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
+| 비결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / NO_SUITABLE_AI_SURFACE_CONTRADICTION` |
+| 사람 실행 + 사람 대상 운영 의미 미확정 | `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT` |
+| 승인된 다른 사람 필요성 근거 + 완전한 운영 의미 | 기존 역량·effect·권한·경계 검증을 계속 수행하고 모두 충족하면 `PASS` |
+
+사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션으로 이를 명시하며 독립 Directive Validator가 전체 내용을 Routing Result와 대조한다. Engine의 `FAIL`·`UNRESOLVED`는 Renderer 호출 전에 차단되고 독립 Validator의 `FAIL`도 방출되지 않는다.
 
 ## 결과 재검증과 의미 지문
 
@@ -187,7 +204,7 @@ python3 tools/collaboration-routing/src/cli.py validate-directive \
 ```sh
 python3 tools/collaboration-routing/src/cli.py validate-schema \
   --kind project-routing-profile \
-  --document tools/collaboration-routing/profiles/framework-lab.v0.1.0.json
+  --document tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
 ```
 
 `validate-schema`의 `PASS`는 `SCHEMA_ONLY`로 표시하며 실행 가능한 결과의 의미 검증을 뜻하지 않는다. 프로필의 경우 중복 식별자·참조·권한 면제도 함께 검사한다. 라우팅과 지시문의 의미 검증은 `route`와 `validate-directive`를 사용한다.
@@ -220,7 +237,7 @@ python3 tools/collaboration-routing/src/cli.py validate-schema \
 
 검증은 로컬 계약 동작에 한정된다. 실제 ChatGPT·Codex·Human IDE 환경 실행이나 승인 시스템 연동을 검증한 것은 아니다. Profile 가용성과 승인 근거의 실제성은 호출자 책임으로 남는다.
 
-Framework Governance, PCBW, Project Instructions는 변경하지 않는다. Skill·hook·ChatGPT 통합, 서버·큐·스케줄러, 자동 운반·실행·승인·orchestration 및 Scope Promotion은 포함하지 않는다. 이번 보정 결과는 `00B`로 반환하며 후속 통합 여부는 Control Plane에서 별도로 판단한다.
+Review 64 시점의 보정에서는 Framework Governance, PCBW, Project Instructions를 변경하지 않았다. Skill·hook·ChatGPT 통합, 서버·큐·스케줄러, 자동 운반·실행·승인·orchestration 및 Scope Promotion은 포함하지 않았다. 해당 보정 결과의 당시 반환 목적지는 `00B`였다.
 
 ## Review 64 적합성 보정
 
@@ -265,3 +282,13 @@ Regression H의 입력은 `kind=reason_context`, 선언 effect `REPOSITORY_MUTAT
 대조 사례는 같은 명령 행위에 충분한 승인 경계를 두고 권한만 `DENIED`로 지정한다. 실제 결과는 `FAIL / AUTHORITY_DENIED`, 해결 유형은 `HUMAN_RESOLUTION` 하나, 지시문은 `null`이다. 추가로 대상·action ID 경계 부족 및 여러 원인이 동시에 발생하는 사례를 검증했다. 전체 49개 테스트에는 기존 A–H, 정상 단일·복합 경로, 지시문 차단, 지문·재검증 및 결정론적 CLI 검증이 포함된다.
 
 이 보정은 커밋·푸시하지 않는다. `00B`의 수락 후 `64 — AI-Native Collaboration Routing Engine v0 Implementation Review`에서 독립 재검토하며, `PASS / READY FOR COMMIT` 전에는 커밋·푸시하지 않는다.
+
+## Design 67: PCBW-R07 정본화 및 결정론적 방출 집행
+
+`HG-67-01 = PASS`에 따라 PCBW-R07을 Effective PCBW Definition에 추가하고 기존 Engine의 action 판정 경계에 연결했다. 현재 계약 버전은 Routing Schema `1.1`, Engine·Integration `0.2.0`, Framework Lab 프로필 `0.2.0`이다. 프로필 의미를 같은 ID/version에 덮어쓰지 않도록 `framework-lab.v0.1.0.json`을 `framework-lab.v0.2.0.json`으로 승격했다.
+
+프로필 action의 `actor`는 기본 책임이고 요청의 `actor`는 선택된 실행 책임이다. 책임 재배정은 action의 역량·effect·권한·실행 경계를 약화하지 않는다. Human IDE / Terminal에는 사람의 정당한 명령 실행을 표현할 수 있도록 `command_execution`과 `COMMAND_EXECUTION`을 추가했지만, 결정론적 명령을 사람에게 배정할 때는 사람 필요성 근거와 운영 의미를 별도로 검증한다. 적합하고 권한 있는 Codex가 존재하는데 `NO_SUITABLE_AUTHORIZED_AI_SURFACE`를 주장하면 `INVALID_HUMAN_DELEGATION`으로 실패한다.
+
+전체 71개 테스트 메서드와 내부 하위 사례가 통과했다. 신규 회귀는 결정론적 사전 점검·반복 폴링·정합성 확인·경계가 정해진 술어 기반 상태 전이·현재 Chat의 shell 부재를 사람 명령 전달로 바꾸는 false-PASS, 여섯 사람 필요성 근거의 유효 경로, basis 누락, 영향 부분 재평가 미확인, 사람 대상 운영 의미 누락·변조 및 `FAIL`·`UNRESOLVED` 방출 차단을 포함한다. 기존 Regression A–I와 정상 단일·복합 PCBW-R01~R06 경로도 함께 통과했다.
+
+Framework Governance와 Failure Reproduction Workflow·Conformance·Reproduction Record Template은 변경하지 않았다. 자동 orchestration, 실행 어댑터와 범용 세션 번호 규칙을 추가하지 않았다.

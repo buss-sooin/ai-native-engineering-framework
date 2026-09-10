@@ -56,6 +56,26 @@ def _expected_headers(result):
     }
 
 
+def _human_execution_responsibilities(plan):
+    responsibilities = []
+    for step in plan:
+        if step['actor'] != 'HUMAN':
+            continue
+        action = step['assigned_actions'][0]
+        semantics = action['human_facing_semantics']['value']
+        responsibilities.append({
+            'Action ID': action['id'],
+            'Human Goal': semantics['goal'],
+            'Human Necessity Basis': action['human_necessity_basis']['value'],
+            'Primary Operational Interface / Tool': semantics['primary_operational_interface'],
+            'What to Observe': semantics['what_to_observe'],
+            'Human Decision Required': semantics['human_decision_required'],
+            'Expected Interpretation': semantics['expected_interpretation'],
+            'CLI / low-level fallback': semantics['cli_fallback'],
+        })
+    return responsibilities
+
+
 def _expected_sections(result):
     request = result['source_request']
     plan = result['execution_plan']
@@ -76,10 +96,16 @@ def _expected_sections(result):
             'AI Session Surface': [step for step in plan if step['actor'] == 'AI'],
             'Human Execution Surface': [step for step in plan if step['actor'] == 'HUMAN'],
         }, 'RESPONSIBILITY_MISMATCH'),
+    ]
+    human_responsibilities = _human_execution_responsibilities(plan)
+    if human_responsibilities:
+        sections.append(('Human Execution Responsibility', human_responsibilities,
+                         'HUMAN_EXECUTION_SEMANTICS_MISMATCH'))
+    sections.extend([
         ('Prohibited / Out-of-scope Action', result['prohibited_actions'], 'PROHIBITED_ACTION_MISMATCH'),
         ('Verification / Expected Result', result['verification_contract'], 'VERIFICATION_MISMATCH'),
         ('Return / Closure Destination', result['return_contract'], 'RETURN_DESTINATION_MISMATCH'),
-    ]
+    ])
     for title, field in (
         ('Stop Conditions', 'stop_conditions'),
         ('Evidence Requirement', 'evidence_requirement'),

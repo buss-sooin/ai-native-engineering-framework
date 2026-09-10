@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:routing-request:1.0",
+  "$id": "urn:collaboration-routing:routing-request:1.1",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.0"
+        "1.1"
       ]
     },
     "request_id": {
@@ -804,6 +804,236 @@
                   },
                   "value": {
                     "type": "boolean"
+                  }
+                },
+                "required": [
+                  "state",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "UNKNOWN"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_REQUIRED"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "human_necessity_basis": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "KNOWN"
+                    ]
+                  },
+                  "value": {
+                    "enum": [
+                      "HUMAN_AUTHORITY_REQUIRED",
+                      "DIRECT_HUMAN_OBSERVATION_OBJECTIVE",
+                      "HUMAN_RISK_CONTROL_REQUIRED",
+                      "HUMAN_LEARNING_OBJECTIVE",
+                      "HUMAN_EXECUTION_SIMPLER_OR_SAFER",
+                      "NO_SUITABLE_AUTHORIZED_AI_SURFACE"
+                    ]
+                  }
+                },
+                "required": [
+                  "state",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "UNKNOWN"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_REQUIRED"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "targeted_re_evaluation_established": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "KNOWN"
+                    ]
+                  },
+                  "value": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "state",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "UNKNOWN"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_REQUIRED"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "human_facing_semantics": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "KNOWN"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "goal": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "primary_operational_interface": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "what_to_observe": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "human_decision_required": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "expected_interpretation": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "cli_fallback": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "KNOWN"
+                                ]
+                              },
+                              "value": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "NOT_REQUIRED"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "goal",
+                      "primary_operational_interface",
+                      "what_to_observe",
+                      "human_decision_required",
+                      "expected_interpretation",
+                      "cli_fallback"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [

@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "id": "framework-lab",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "project": "AI-Native Engineering Framework Lab",
   "actions": [
     {
@@ -13,6 +13,7 @@
         "READ_ONLY"
       ],
       "actor": "AI",
+      "deterministic": false,
       "authority_required": false,
       "preferred_surfaces": [
         "general-chat"
@@ -27,6 +28,7 @@
         "READ_ONLY"
       ],
       "actor": "AI",
+      "deterministic": false,
       "authority_required": false,
       "preferred_surfaces": [
         "work-mode"
@@ -41,6 +43,7 @@
         "ARTIFACT_WRITE"
       ],
       "actor": "AI",
+      "deterministic": false,
       "authority_required": true,
       "preferred_surfaces": [
         "work-mode"
@@ -55,6 +58,7 @@
         "REPOSITORY_MUTATION"
       ],
       "actor": "AI",
+      "deterministic": true,
       "authority_required": true,
       "preferred_surfaces": [
         "codex"
@@ -69,6 +73,7 @@
         "REPOSITORY_MUTATION"
       ],
       "actor": "AI",
+      "deterministic": true,
       "authority_required": true,
       "preferred_surfaces": [
         "codex"
@@ -83,6 +88,7 @@
         "COMMAND_EXECUTION"
       ],
       "actor": "AI",
+      "deterministic": true,
       "authority_required": true,
       "preferred_surfaces": [
         "codex"
@@ -97,6 +103,7 @@
         "COMMAND_EXECUTION"
       ],
       "actor": "AI",
+      "deterministic": true,
       "authority_required": true,
       "preferred_surfaces": [
         "codex"
@@ -111,6 +118,7 @@
         "RUNTIME_OBSERVATION"
       ],
       "actor": "HUMAN",
+      "deterministic": false,
       "authority_required": true,
       "preferred_surfaces": [
         "human-terminal"
@@ -125,6 +133,7 @@
         "RUNTIME_MUTATION"
       ],
       "actor": "HUMAN",
+      "deterministic": true,
       "authority_required": true,
       "preferred_surfaces": [
         "human-terminal"
@@ -195,6 +204,7 @@
       "label": "Human IDE / Terminal",
       "actor": "HUMAN",
       "capabilities": [
+        "command_execution",
         "runtime_observation",
         "runtime_mutation"
       ],
@@ -205,6 +215,7 @@
       "model_recommendation": "Surface-managed / N/A",
       "reasoning_recommendation": "Surface-managed / N/A",
       "supported_effects": [
+        "COMMAND_EXECUTION",
         "RUNTIME_OBSERVATION",
         "RUNTIME_MUTATION"
       ]

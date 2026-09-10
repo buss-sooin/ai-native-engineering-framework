@@ -16,6 +16,26 @@ def heading(value):
     return text.replace('\r', '&#13;').replace('\n', '&#10;')
 
 
+def human_execution_responsibilities(plan):
+    responsibilities = []
+    for step in plan:
+        if step['actor'] != 'HUMAN':
+            continue
+        action = step['assigned_actions'][0]
+        semantics = action['human_facing_semantics']['value']
+        responsibilities.append({
+            'Action ID': action['id'],
+            'Human Goal': semantics['goal'],
+            'Human Necessity Basis': action['human_necessity_basis']['value'],
+            'Primary Operational Interface / Tool': semantics['primary_operational_interface'],
+            'What to Observe': semantics['what_to_observe'],
+            'Human Decision Required': semantics['human_decision_required'],
+            'Expected Interpretation': semantics['expected_interpretation'],
+            'CLI / low-level fallback': semantics['cli_fallback'],
+        })
+    return responsibilities
+
+
 def _render(result):
     request = result['source_request']
     plan = result['execution_plan']
@@ -37,9 +57,14 @@ def _render(result):
         ('Required Responsibility', {'allocation': result['responsibility_allocation'], 'required_actions': request['required_actions'],
                                      'AI Session Surface': [s for s in plan if s['actor'] == 'AI'],
                                      'Human Execution Surface': [s for s in plan if s['actor'] == 'HUMAN']}),
+    ]
+    human_responsibilities = human_execution_responsibilities(plan)
+    if human_responsibilities:
+        sections.append(('Human Execution Responsibility', human_responsibilities))
+    sections.extend([
         ('Prohibited / Out-of-scope Action', result['prohibited_actions']),
         ('Verification / Expected Result', result['verification_contract']),
-        ('Return / Closure Destination', result['return_contract'])]
+        ('Return / Closure Destination', result['return_contract'])])
     for title, field in [('Stop Conditions', 'stop_conditions'), ('Evidence Requirement', 'evidence_requirement'),
                          ('Branch / Revision / Environment', 'branch_revision_environment')]:
         if request[field]['state'] != 'NOT_REQUIRED':

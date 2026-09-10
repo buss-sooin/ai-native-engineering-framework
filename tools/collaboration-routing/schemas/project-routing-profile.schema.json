@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:project-routing-profile:1.0",
+  "$id": "urn:collaboration-routing:project-routing-profile:1.1",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.0"
+        "1.1"
       ]
     },
     "id": {
@@ -60,6 +60,9 @@
               "HUMAN"
             ]
           },
+          "deterministic": {
+            "type": "boolean"
+          },
           "authority_required": {
             "type": "boolean"
           },
@@ -78,6 +81,7 @@
           "capabilities",
           "effects",
           "actor",
+          "deterministic",
           "authority_required",
           "preferred_surfaces"
         ],

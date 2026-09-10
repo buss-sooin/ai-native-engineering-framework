@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "request_id": "regression-I",
   "project": {
     "state": "KNOWN",
@@ -39,7 +39,7 @@
   "canonical_conflict": "CLEAR",
   "profile": {
     "id": "framework-lab",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "required_actions": [
     {
@@ -72,6 +72,15 @@
       "human_direct": {
         "state": "KNOWN",
         "value": false
+      },
+      "human_necessity_basis": {
+        "state": "NOT_REQUIRED"
+      },
+      "targeted_re_evaluation_established": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_facing_semantics": {
+        "state": "NOT_REQUIRED"
       },
       "verification_requirement": {
         "state": "KNOWN",

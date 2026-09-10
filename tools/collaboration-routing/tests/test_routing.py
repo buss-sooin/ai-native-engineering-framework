@@ -22,9 +22,20 @@ def nr():
     return {'state': 'NOT_REQUIRED'}
 
 
+def human_semantics(kind):
+    return known({
+        'goal': 'Perform ' + kind + ' with direct human responsibility.',
+        'primary_operational_interface': 'Human IDE / Terminal',
+        'what_to_observe': ['Observe the requested action and its verification evidence.'],
+        'human_decision_required': 'Decide whether the observed result satisfies the approved boundary.',
+        'expected_interpretation': 'A conforming result permits return to the named verification owner.',
+        'cli_fallback': known('Use the approved low-level command only when the primary interface is insufficient.'),
+    })
+
+
 class RoutingTests(unittest.TestCase):
     def setUp(self):
-        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.1.0.json')
+        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.2.0.json')
         self.request = load_json(ROOT / 'tests/fixtures/inspection.request.json')
 
     def make(self, *kinds):
@@ -36,12 +47,17 @@ class RoutingTests(unittest.TestCase):
             definition = definitions[kind]
             effects.update(definition['effects'])
             required = definition['authority_required']
+            human = definition['actor'] == 'HUMAN'
             request['required_actions'].append({'id': 'a' + str(index), 'kind': known(kind),
                 'actor': known(definition['actor']), 'authority': 'AUTHORIZED' if required else 'NOT_REQUIRED',
                 'target': copy.deepcopy(request['target']), 'effects': known(definition['effects']),
-                'source_references': known(['fixture:' + kind]), 'human_direct': known(definition['actor'] == 'HUMAN'),
+                'source_references': known(['fixture:' + kind]), 'human_direct': known(human),
+                'human_necessity_basis': known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
+                                                else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
+                'targeted_re_evaluation_established': nr(),
+                'human_facing_semantics': human_semantics(kind) if human else nr(),
                 'verification_requirement': known(['Verify ' + kind + ' against the supplied target.']),
-                'session_role': known('Human Runtime Operator' if definition['actor'] == 'HUMAN' else 'AI Task Reviewer'),
+                'session_role': known('Human Runtime Operator' if human else 'AI Task Reviewer'),
                 'approval_reference': known('fixture-only human approval; not live authorization') if required else nr()})
         request['approved_execution_boundary'] = known({'target': request['target']['value'],
             'allowed_action_ids': [a['id'] for a in request['required_actions']], 'allowed_effects': sorted(effects)})
@@ -50,6 +66,16 @@ class RoutingTests(unittest.TestCase):
 
     def codes(self, envelope):
         return set(envelope['failure_codes']) | {i['code'] for i in envelope['unresolved_issues']}
+
+    def humanize(self, request, basis, reevaluated=nr(), semantics=None):
+        action = request['required_actions'][0]
+        action.update(actor=known('HUMAN'), human_direct=known(True),
+                      human_necessity_basis=known(basis) if basis else {'state': 'UNKNOWN'},
+                      targeted_re_evaluation_established=copy.deepcopy(reevaluated),
+                      human_facing_semantics=human_semantics(action['kind']['value']) if semantics is None else semantics,
+                      session_role=known('Human Execution Operator'))
+        request['surface_selection'] = known([{'action_id': action['id'], 'surface_id': 'human-terminal'}])
+        return request
 
     def assertBlocked(self, envelope, status, code):
         self.assertEqual(envelope['routing_status'], status, envelope)
@@ -116,6 +142,122 @@ class RoutingTests(unittest.TestCase):
                     text = directive.render(result)['directive']
                     self.assertIn('AI Session Surface', text)
                     self.assertIn('Human Execution Surface', text)
+
+    def test_pcbw_r07_blocks_deterministic_human_command_relay(self):
+        cases = (
+            'deterministic preflight',
+            'repeated deterministic polling',
+            'deterministic reconciliation',
+            'bounded predicate-driven phase transition',
+            'current Chat lacks shell while authorized Codex CLI is suitable',
+        )
+        for description in cases:
+            with self.subTest(description=description):
+                request = self.humanize(self.make('run_command'),
+                                        'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+                request['required_actions'][0]['source_references'] = known([description])
+                envelope = engine.evaluate(request, self.profile)
+                self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+
+    def test_pcbw_r07_preserves_legitimate_human_direct_engineering(self):
+        bases = (
+            'HUMAN_AUTHORITY_REQUIRED',
+            'DIRECT_HUMAN_OBSERVATION_OBJECTIVE',
+            'HUMAN_RISK_CONTROL_REQUIRED',
+            'HUMAN_LEARNING_OBJECTIVE',
+            'HUMAN_EXECUTION_SIMPLER_OR_SAFER',
+        )
+        for basis in bases:
+            with self.subTest(basis=basis):
+                envelope = engine.evaluate(self.humanize(self.make('run_command'), basis), self.profile)
+                self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+                self.assertEqual(envelope['result']['execution_plan'][0]['surface_id'], 'human-terminal')
+                rendered = directive.render(envelope['result'])['directive']
+                self.assertIn('## Human Execution Responsibility', rendered)
+                self.assertIn('Human Goal', rendered)
+                self.assertIn(basis, rendered)
+
+    def test_pcbw_r07_no_suitable_ai_requires_targeted_re_evaluation(self):
+        for reevaluated in ({'state': 'UNKNOWN'}, nr(), known(False)):
+            with self.subTest(reevaluated=reevaluated):
+                request = self.humanize(self.make('run_command'),
+                                        'NO_SUITABLE_AUTHORIZED_AI_SURFACE', reevaluated)
+                self.assertBlocked(engine.evaluate(request, self.profile), 'UNRESOLVED',
+                                   'TARGETED_RE_EVALUATION_NOT_ESTABLISHED')
+
+        profile = copy.deepcopy(self.profile)
+        next(surface for surface in profile['surfaces'] if surface['id'] == 'codex')['available'] = known(False)
+        request = self.humanize(self.make('run_command'),
+                                'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+        envelope = engine.evaluate(request, profile)
+        self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+        self.assertEqual(envelope['result']['execution_plan'][0]['actor'], 'HUMAN')
+
+        profile = copy.deepcopy(self.profile)
+        next(surface for surface in profile['surfaces'] if surface['id'] == 'codex')['available'] = {'state': 'UNKNOWN'}
+        request = self.humanize(self.make('run_command'),
+                                'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+        self.assertBlocked(engine.evaluate(request, profile), 'UNRESOLVED',
+                           'TARGETED_RE_EVALUATION_NOT_ESTABLISHED')
+
+        profile = copy.deepcopy(self.profile)
+        profile['surfaces'].append({
+            'id': 'ai-runtime-observer', 'label': 'AI Runtime Observer', 'actor': 'AI',
+            'capabilities': ['runtime_observation'], 'available': known(True),
+            'model_recommendation': 'Surface-managed / N/A',
+            'reasoning_recommendation': 'Surface-managed / N/A',
+            'supported_effects': ['RUNTIME_OBSERVATION'],
+        })
+        request = self.make('observe_runtime')
+        request['required_actions'][0].update(
+            human_necessity_basis=known('NO_SUITABLE_AUTHORIZED_AI_SURFACE'),
+            targeted_re_evaluation_established=known(True))
+        self.assertBlocked(engine.evaluate(request, profile), 'FAIL',
+                           'NO_SUITABLE_AI_SURFACE_CONTRADICTION')
+
+    def test_pcbw_r07_missing_basis_and_insufficient_semantics_block(self):
+        request = self.humanize(self.make('run_command'), None)
+        self.assertBlocked(engine.evaluate(request, self.profile), 'UNRESOLVED',
+                           'HUMAN_NECESSITY_BASIS_MISSING')
+
+        request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
+        del request['required_actions'][0]['human_necessity_basis']
+        self.assertBlocked(engine.evaluate(request, self.profile), 'UNRESOLVED',
+                           'HUMAN_NECESSITY_BASIS_MISSING')
+
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics={'state': 'UNKNOWN'})
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED')
+        del request['required_actions'][0]['human_facing_semantics']
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
+    def test_pcbw_r07_missing_targeted_re_evaluation_is_unresolved(self):
+        request = self.humanize(self.make('run_command'),
+                                'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+        del request['required_actions'][0]['targeted_re_evaluation_established']
+        self.assertBlocked(engine.evaluate(request, self.profile), 'UNRESOLVED',
+                           'TARGETED_RE_EVALUATION_NOT_ESTABLISHED')
+
+    def test_pcbw_r01_to_r06_legacy_action_shape_remains_accepted(self):
+        for kind in ('reason_context', 'inspect_repository', 'run_command'):
+            with self.subTest(kind=kind):
+                request = self.make(kind)
+                for field in ('human_necessity_basis', 'targeted_re_evaluation_established',
+                              'human_facing_semantics'):
+                    del request['required_actions'][0][field]
+                self.assertEqual(engine.evaluate(request, self.profile)['routing_status'], 'PASS')
+
+    def test_pcbw_r07_human_semantics_are_independently_protected(self):
+        result = engine.evaluate(self.humanize(self.make('run_command'),
+                                               'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
+        text = directive.render(result)['directive']
+        changed = text.replace('Perform run_command with direct human responsibility.',
+                               'Relay an unexplained command.', 1)
+        self.assertBlocked(directive.validate_directive(result, changed), 'FAIL', 'MATERIAL_DIRECTIVE_DRIFT')
 
     def test_explicit_valid_selection(self):
         request = self.make('run_tests')
@@ -217,7 +359,7 @@ class RoutingTests(unittest.TestCase):
         self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL', 'SURFACE_RESPONSIBILITY_MISMATCH')
 
     def test_invalid_profile(self):
-        for change in ('duplicate', 'bad-reference', 'authority-waiver', 'availability-nr'):
+        for change in ('duplicate', 'bad-reference', 'authority-waiver', 'availability-nr', 'deterministic-missing'):
             profile = copy.deepcopy(self.profile)
             if change == 'duplicate':
                 profile['surfaces'].append(copy.deepcopy(profile['surfaces'][0]))
@@ -225,8 +367,10 @@ class RoutingTests(unittest.TestCase):
                 profile['actions'][0]['preferred_surfaces'] = ['missing']
             elif change == 'authority-waiver':
                 profile['actions'][2]['authority_required'] = False
-            else:
+            elif change == 'availability-nr':
                 profile['surfaces'][0]['available'] = nr()
+            else:
+                del profile['actions'][0]['deterministic']
             self.assertBlocked(engine.evaluate(self.request, profile), 'FAIL', 'ROUTING_CONTRACT_CONTRADICTION')
 
     def test_invalid_selections(self):
@@ -412,7 +556,8 @@ class RoutingTests(unittest.TestCase):
             self.assertEqual(leg['reasoning_recommendation'], surface['reasoning_recommendation'])
 
     def test_review64_new_action_fields_fail_closed(self):
-        for field in ('target', 'effects', 'source_references', 'human_direct', 'verification_requirement', 'session_role'):
+        for field in ('target', 'effects', 'source_references', 'human_direct',
+                      'verification_requirement', 'session_role'):
             with self.subTest(field=field):
                 request = self.make('inspect_repository')
                 request['required_actions'][0][field] = {'state': 'UNKNOWN'}
@@ -513,7 +658,7 @@ class RoutingTests(unittest.TestCase):
     def test_review64_h_cli_has_no_executable_directive(self):
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-h.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.1.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.2.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertBlocked(json.loads(response.stdout), 'FAIL', 'SURFACE_EFFECT_MISMATCH')
 
@@ -542,7 +687,7 @@ class RoutingTests(unittest.TestCase):
         # The exact singleton diagnostic also excludes surface mismatch, explicit denial and unknown authority.
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-i.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.1.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.2.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertEqual(json.loads(response.stdout), envelope)
 

@@ -6,18 +6,31 @@ import time
 
 from schema_validation import InvalidDocument, canonical, validate
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 RESOLUTIONS = {
-    'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION'),
+    'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',
+                         'HUMAN_NECESSITY_BASIS_MISSING'),
     'ENVIRONMENT_RESOLUTION': ('REQUIRED_CAPABILITY_UNAVAILABLE', 'NO_FEASIBLE_SURFACE_AVAILABLE',
                                'PROFILE_VERSION_UNAVAILABLE', 'SURFACE_CAPABILITY_MISMATCH', 'SURFACE_EFFECT_MISMATCH'),
     'HUMAN_RESOLUTION': ('CANONICAL_CONFLICT', 'AMBIGUOUS_SURFACE_SELECTION', 'AUTHORITY_UNKNOWN',
-                         'AUTHORITY_DENIED', 'PROHIBITED_ACTION', 'SURFACE_RESPONSIBILITY_MISMATCH'),
+                         'AUTHORITY_DENIED', 'PROHIBITED_ACTION', 'SURFACE_RESPONSIBILITY_MISMATCH',
+                         'INVALID_HUMAN_DELEGATION', 'HUMAN_FACING_SEMANTICS_INSUFFICIENT',
+                         'TARGETED_RE_EVALUATION_NOT_ESTABLISHED',
+                         'NO_SUITABLE_AI_SURFACE_CONTRADICTION'),
     'HUMAN_GATE': ('AUTHORITY_REQUIRED', 'BOUNDARY_TARGET_INSUFFICIENT',
                    'BOUNDARY_ACTION_INSUFFICIENT', 'BOUNDARY_EFFECT_INSUFFICIENT'),
     'REVALIDATE': ('MATERIAL_DIRECTIVE_DRIFT', 'HEADER_BODY_MISMATCH'),
     'INTERNAL_RESOLUTION': ('VALIDATOR_ERROR', 'VALIDATOR_TIMEOUT'),
+}
+
+HUMAN_NECESSITY_BASES = {
+    'HUMAN_AUTHORITY_REQUIRED',
+    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE',
+    'HUMAN_RISK_CONTROL_REQUIRED',
+    'HUMAN_LEARNING_OBJECTIVE',
+    'HUMAN_EXECUTION_SIMPLER_OR_SAFER',
+    'NO_SUITABLE_AUTHORIZED_AI_SURFACE',
 }
 RESOLUTION_INSTRUCTIONS = {
     'INPUT_COMPLETION': 'Complete or correct structured input, then revalidate.',
@@ -96,7 +109,7 @@ def validate_internal_conformance(result):
         definition = definitions[action['kind']['value']]
         surface = surfaces[step['surface_id']]
         valid = valid and step['kind'] == action['kind']['value']
-        valid = valid and step['actor'] == action['actor']['value'] == definition['actor'] == surface['actor']
+        valid = valid and step['actor'] == action['actor']['value'] == surface['actor']
         valid = valid and surface['available'] == {'state': 'KNOWN', 'value': True}
         valid = valid and set(step['capabilities']) == set(definition['capabilities'])
         valid = valid and set(step['capabilities']) <= set(surface['capabilities'])
@@ -117,6 +130,24 @@ def validate_internal_conformance(result):
         valid = valid and step['reasoning_recommendation'] == surface['reasoning_recommendation']
         valid = valid and action['authority'] in ('AUTHORIZED', 'NOT_REQUIRED')
         valid = valid and (not (definition['authority_required'] or effects != {'READ_ONLY'}) or action['authority'] == 'AUTHORIZED')
+        if step['actor'] == 'HUMAN':
+            basis = action.get('human_necessity_basis', {'state': 'UNKNOWN'})
+            semantics = action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
+            valid = valid and basis['state'] == 'KNOWN' and basis.get('value') in HUMAN_NECESSITY_BASES
+            valid = valid and semantics['state'] == 'KNOWN'
+            if basis.get('value') == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
+                reevaluation = action.get('targeted_re_evaluation_established', {'state': 'UNKNOWN'})
+                valid = valid and reevaluation == {'state': 'KNOWN', 'value': True}
+                valid = valid and not any(
+                    candidate['actor'] == 'AI'
+                    and set(definition['capabilities']) <= set(candidate['capabilities'])
+                    and effects <= set(candidate['supported_effects'])
+                    and candidate['available'] != {'state': 'KNOWN', 'value': False}
+                    for candidate in surfaces.values())
+        else:
+            valid = valid and action.get('human_necessity_basis', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
+            valid = valid and action.get('targeted_re_evaluation_established', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
+            valid = valid and action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
     valid = valid and result['semantic_fingerprint'] == fingerprint(result)
     if not valid:
         raise RuntimeError('internal PASS contract invariant failed')
@@ -235,8 +266,6 @@ def _evaluate(request, profile, deadline):
         capabilities.update(definition['capabilities'])
         # Declared effects may add obligations, but cannot erase the operation's minimum effects.
         effects = set(definition['effects']) | set(declared_effects or [])
-        if actor is not None and actor != definition['actor']:
-            fail('SURFACE_RESPONSIBILITY_MISMATCH')
         if kind in prohibited or aid in prohibited or effects & set(prohibited):
             assessment['status'] = 'DENIED'
             fail('PROHIBITED_ACTION')
@@ -251,7 +280,7 @@ def _evaluate(request, profile, deadline):
             assessment['status'] = 'DENIED'
             fail('AUTHORITY_DENIED')
             fail('AUTHORITY_REQUIRED')
-        possible, unknown_available = [], False
+        possible, unknown_available, suitable_ai, ai_suitability_unknown = [], False, [], False
         for sid in sorted(surfaces):
             surface = surfaces[sid]
             reasons = []
@@ -259,7 +288,7 @@ def _evaluate(request, profile, deadline):
                 reasons.append('SURFACE_CAPABILITY_MISMATCH')
             if effects - set(surface['supported_effects']):
                 reasons.append('SURFACE_EFFECT_MISMATCH')
-            if surface['actor'] != definition['actor']:
+            if surface['actor'] != actor:
                 reasons.append('SURFACE_RESPONSIBILITY_MISMATCH')
             if surface['available']['state'] == 'UNKNOWN':
                 unknown_available = unknown_available or not reasons
@@ -271,6 +300,42 @@ def _evaluate(request, profile, deadline):
                     rejected.append({'action_id': aid, 'surface_id': sid, 'reason': reason})
             else:
                 possible.append(sid)
+            if (surface['actor'] == 'AI'
+                    and set(definition['capabilities']) <= set(surface['capabilities'])
+                    and effects <= set(surface['supported_effects'])
+                    and assessment['status'] in ('AUTHORIZED', 'NOT_REQUIRED')):
+                if surface['available'] == {'state': 'KNOWN', 'value': True}:
+                    suitable_ai.append(sid)
+                elif surface['available']['state'] == 'UNKNOWN':
+                    ai_suitability_unknown = True
+        basis_field = required.get('human_necessity_basis',
+                                   {'state': 'UNKNOWN'} if actor == 'HUMAN' else {'state': 'NOT_REQUIRED'})
+        reevaluation_field = required.get('targeted_re_evaluation_established',
+                                          {'state': 'UNKNOWN'} if actor == 'HUMAN' else {'state': 'NOT_REQUIRED'})
+        semantics_field = required.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
+        if actor == 'HUMAN':
+            basis = basis_field.get('value') if basis_field['state'] == 'KNOWN' else None
+            if basis is None:
+                unresolved('HUMAN_NECESSITY_BASIS_MISSING', aid)
+            if semantics_field['state'] != 'KNOWN':
+                fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+            if basis == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
+                if reevaluation_field != {'state': 'KNOWN', 'value': True}:
+                    unresolved('TARGETED_RE_EVALUATION_NOT_ESTABLISHED', aid)
+                elif suitable_ai:
+                    fail('INVALID_HUMAN_DELEGATION' if definition['deterministic']
+                         else 'NO_SUITABLE_AI_SURFACE_CONTRADICTION')
+                elif ai_suitability_unknown:
+                    unresolved('TARGETED_RE_EVALUATION_NOT_ESTABLISHED',
+                               aid + ': AI surface availability is unknown')
+        elif actor == 'AI':
+            for name, field in (('human_necessity_basis', basis_field),
+                                ('targeted_re_evaluation_established', reevaluation_field),
+                                ('human_facing_semantics', semantics_field)):
+                if field['state'] == 'UNKNOWN':
+                    unresolved('REQUIRED_INPUT_UNKNOWN', aid + '.' + name)
+                elif field['state'] != 'NOT_REQUIRED':
+                    fail('ROUTING_CONTRACT_CONTRADICTION')
         feasible.append({'action_id': aid, 'surface_ids': possible})
         choice = None
         if aid in selected:
@@ -300,7 +365,7 @@ def _evaluate(request, profile, deadline):
         if choice:
             surface = surfaces[choice]
             plan.append({'action_id': aid, 'kind': kind, 'surface_id': choice,
-                         'surface_label': surface['label'], 'actor': definition['actor'],
+                         'surface_label': surface['label'], 'actor': actor,
                          'capabilities': sorted(definition['capabilities']), 'effects': sorted(effects),
                          'leg_id': 'leg-' + aid, 'session_role': copy.deepcopy(required['session_role']),
                          'execution_surface': {'id': choice, 'label': surface['label']},
@@ -321,7 +386,7 @@ def _evaluate(request, profile, deadline):
     chosen_ids = sorted({step['surface_id'] for step in plan})
     mode = ('COMPOSITE' if len(chosen_ids) > 1 else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
     result = {
-        'schema_version': '1.0', 'routing_result_id': 'pending', 'request_id': request['request_id'],
+        'schema_version': '1.1', 'routing_result_id': 'pending', 'request_id': request['request_id'],
         'routing_status': status, 'project': copy.deepcopy(request['project']),
         'destination_session_role': copy.deepcopy(request['destination_session_role']), 'route_mode': mode,
         'required_capabilities': sorted(capabilities), 'feasible_surfaces': feasible,

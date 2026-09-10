@@ -8,7 +8,7 @@ from engine import evaluate, validate_profile
 from schema_validation import canonical, validate
 
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 _DEFAULT = object()
 
 

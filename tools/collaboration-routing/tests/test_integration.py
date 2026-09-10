@@ -20,14 +20,39 @@ def known(value):
     return {'state': 'KNOWN', 'value': value}
 
 
+def nr():
+    return {'state': 'NOT_REQUIRED'}
+
+
+def human_semantics(kind):
+    return known({
+        'goal': 'Perform ' + kind + ' with direct human responsibility.',
+        'primary_operational_interface': 'Human IDE / Terminal',
+        'what_to_observe': ['Observe the requested action and its verification evidence.'],
+        'human_decision_required': 'Decide whether the observed result satisfies the approved boundary.',
+        'expected_interpretation': 'A conforming result permits return to the named verification owner.',
+        'cli_fallback': known('Use the approved low-level command only when the primary interface is insufficient.'),
+    })
+
+
 class IntegrationTests(unittest.TestCase):
     def setUp(self):
-        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.1.0.json')
+        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.2.0.json')
         self.request = load_json(ROOT / 'tests/fixtures/inspection.request.json')
 
     def assert_no_directive(self, envelope):
         self.assertIsNone(envelope['directive'])
         self.assertEqual(envelope['emission_outcome'], 'BLOCKED')
+
+    def humanize(self, request, basis, reevaluated=nr(), semantics=None):
+        action = request['required_actions'][0]
+        action.update(actor=known('HUMAN'), human_direct=known(True),
+                      human_necessity_basis=known(basis) if basis else {'state': 'UNKNOWN'},
+                      targeted_re_evaluation_established=copy.deepcopy(reevaluated),
+                      human_facing_semantics=human_semantics(action['kind']['value']) if semantics is None else semantics,
+                      session_role=known('Human Execution Operator'))
+        request['surface_selection'] = known([{'action_id': action['id'], 'surface_id': 'human-terminal'}])
+        return request
 
     def make(self, *kinds):
         request = copy.deepcopy(self.request)
@@ -36,6 +61,7 @@ class IntegrationTests(unittest.TestCase):
         for index, kind in enumerate(kinds):
             definition = next(item for item in self.profile['actions'] if item['kind'] == kind)
             required = definition['authority_required']
+            human = definition['actor'] == 'HUMAN'
             effects.update(definition['effects'])
             request['required_actions'].append({
                 'id': 'a' + str(index), 'kind': known(kind), 'actor': known(definition['actor']),
@@ -43,9 +69,13 @@ class IntegrationTests(unittest.TestCase):
                 'approval_reference': known('fixture approval') if required else {'state': 'NOT_REQUIRED'},
                 'target': copy.deepcopy(request['target']), 'effects': known(definition['effects']),
                 'source_references': known(['fixture:' + kind]),
-                'human_direct': known(definition['actor'] == 'HUMAN'),
+                'human_direct': known(human),
+                'human_necessity_basis': known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
+                                                else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
+                'targeted_re_evaluation_established': nr(),
+                'human_facing_semantics': human_semantics(kind) if human else nr(),
                 'verification_requirement': known(['Verify ' + kind]),
-                'session_role': known('Human Operator' if definition['actor'] == 'HUMAN' else 'AI Reviewer'),
+                'session_role': known('Human Operator' if human else 'AI Reviewer'),
             })
         request['approved_execution_boundary'] = known({
             'target': request['target']['value'],
@@ -99,6 +129,49 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(unresolved_envelope['integration_status'], 'BLOCKED_BY_ROUTING')
         self.assertEqual(unresolved_envelope['routing_status'], 'UNRESOLVED')
         self.assert_no_directive(unresolved_envelope)
+
+    def test_pcbw_r07_fail_and_unresolved_never_emit(self):
+        failed = self.humanize(self.make('run_command'),
+                               'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+        fail_envelope = integration.integrate(failed, self.profile)
+        self.assertEqual(fail_envelope['routing_status'], 'FAIL')
+        self.assertIn('INVALID_HUMAN_DELEGATION', fail_envelope['failure_codes'])
+        self.assert_no_directive(fail_envelope)
+
+        unresolved = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
+        del unresolved['required_actions'][0]['human_necessity_basis']
+        unresolved_envelope = integration.integrate(unresolved, self.profile)
+        self.assertEqual(unresolved_envelope['routing_status'], 'UNRESOLVED')
+        self.assertIn('HUMAN_NECESSITY_BASIS_MISSING',
+                      {item['code'] for item in unresolved_envelope['unresolved_issues']})
+        self.assert_no_directive(unresolved_envelope)
+
+        insufficient = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED')
+        del insufficient['required_actions'][0]['human_facing_semantics']
+        insufficient_envelope = integration.integrate(insufficient, self.profile)
+        self.assertEqual(insufficient_envelope['routing_status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', insufficient_envelope['failure_codes'])
+        self.assert_no_directive(insufficient_envelope)
+
+    def test_pcbw_r07_legitimate_human_execution_emits_complete_semantics(self):
+        request = self.humanize(self.make('run_command'), 'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+        self.assertEqual(envelope['emission_outcome'], 'EMITTED')
+        self.assertIn('## Human Execution Responsibility', envelope['directive'])
+        self.assertIn('Primary Operational Interface / Tool', envelope['directive'])
+
+    def test_pcbw_r07_human_semantics_drift_is_rejected_by_independent_validator(self):
+        request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
+        result = engine.evaluate(request, self.profile)['result']
+        valid = directive.render(result)['directive']
+        marker = '## Human Execution Responsibility'
+        prefix, human_section = valid.split(marker, 1)
+        changed = prefix + marker + human_section.replace(
+            'Perform run_command with direct human responsibility.', 'Relay an unexplained command.', 1)
+        validation = validate_directive_conformance(result, changed)
+        self.assertEqual(validation['status'], 'FAIL')
+        self.assertIn('HUMAN_EXECUTION_SEMANTICS_MISMATCH', validation['failure_codes'])
 
     def test_invalid_request_and_profile_are_integration_blocked(self):
         invalid_request = copy.deepcopy(self.request)
@@ -229,7 +302,7 @@ class IntegrationTests(unittest.TestCase):
     def test_integration_cli_pass_and_invalid_serialization(self):
         command = [sys.executable, str(ROOT / 'src/integration_cli.py'),
                    '--request', str(ROOT / 'tests/fixtures/inspection.request.json'),
-                   '--profile', str(ROOT / 'profiles/framework-lab.v0.1.0.json')]
+                   '--profile', str(ROOT / 'profiles/framework-lab.v0.2.0.json')]
         passed = subprocess.run(command, capture_output=True, text=True)
         self.assertEqual(passed.returncode, 0, passed.stdout)
         self.assertEqual(json.loads(passed.stdout)['integration_status'], 'PASS')
