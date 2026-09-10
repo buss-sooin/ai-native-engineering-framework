@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 import engine
 import directive
+import directive_conformance
 from schema_validation import InvalidDocument, SchemaError, check_schema, load_json, validate
 
 
@@ -145,17 +146,25 @@ class RoutingTests(unittest.TestCase):
 
     def test_pcbw_r07_blocks_deterministic_human_command_relay(self):
         cases = (
-            'deterministic preflight',
-            'repeated deterministic polling',
-            'deterministic reconciliation',
-            'bounded predicate-driven phase transition',
-            'current Chat lacks shell while authorized Codex CLI is suitable',
+            ('deterministic preflight', 'run_tests', 'Preflight Verification Runner',
+             'Run the approved preflight verification before execution.'),
+            ('repeated deterministic polling', 'run_command', 'Runtime State Poller',
+             'Poll the bounded runtime predicate until it reaches a terminal state.'),
+            ('deterministic reconciliation', 'run_command', 'Evidence Reconciliation Runner',
+             'Reconcile the captured counts using the approved deterministic formula.'),
+            ('bounded predicate-driven phase transition', 'run_command', 'Phase Transition Runner',
+             'Apply the approved transition only when the explicit predicate is true.'),
+            ('current Chat lacks shell while authorized Codex CLI is suitable', 'run_command',
+             'Command Execution Runner', 'Execute the authorized command on Codex CLI.'),
         )
-        for description in cases:
+        for description, kind, role, verification in cases:
             with self.subTest(description=description):
-                request = self.humanize(self.make('run_command'),
+                request = self.humanize(self.make(kind),
                                         'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
-                request['required_actions'][0]['source_references'] = known([description])
+                request['objective'] = known(description)
+                request['required_actions'][0].update(
+                    source_references=known(['PCBW-R07 regression: ' + description]),
+                    session_role=known(role), verification_requirement=known([verification]))
                 envelope = engine.evaluate(request, self.profile)
                 self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
 
@@ -258,6 +267,89 @@ class RoutingTests(unittest.TestCase):
         changed = text.replace('Perform run_command with direct human responsibility.',
                                'Relay an unexplained command.', 1)
         self.assertBlocked(directive.validate_directive(result, changed), 'FAIL', 'MATERIAL_DIRECTIVE_DRIFT')
+
+    def test_pcbw_r07_identifier_only_semantics_fail_closed(self):
+        semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        validate(request, 'routing-request')
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
+    def test_pcbw_r07_control_placeholder_and_mixed_semantics_fail(self):
+        cases = (
+            ('identifier-only', 'goal', 'FS-07'),
+            ('status-only', 'human_decision_required', 'UNRESOLVED'),
+            ('placeholder-only', 'expected_interpretation', 'TODO'),
+            ('phase-gate-step-only', 'what_to_observe', ['Phase A Gate PASS STEP-3']),
+            ('mixed-identifiers', 'goal', 'FS-07 C0 Gate PASS Phase A STEP-3'),
+            ('identifier-interface', 'primary_operational_interface', 'C0'),
+            ('placeholder-fallback', 'cli_fallback', known('TBD')),
+        )
+        for label, field, value in cases:
+            with self.subTest(label=label):
+                semantics = human_semantics('run_command')
+                semantics['value'][field] = value
+                request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
+                                        semantics=semantics)
+                self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                                   'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
+    def test_pcbw_r07_concise_operational_interfaces_remain_valid(self):
+        for interface in ('MySQL Workbench', 'Grafana'):
+            with self.subTest(interface=interface):
+                semantics = known({
+                    'goal': 'MySQL 복구 후 persistence가 정상 재개됐는지 판단한다.',
+                    'primary_operational_interface': interface,
+                    'what_to_observe': ['대상 barcode cohort가 실제 table에 저장되는지 확인한다.'],
+                    'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
+                    'expected_interpretation': 'DB health뿐 아니라 실제 persistence 결과까지 확인되어야 복구 완료다.',
+                    'cli_fallback': nr(),
+                })
+                request = self.humanize(self.make('run_command'),
+                                        'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
+                envelope = engine.evaluate(request, self.profile)
+                self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+                self.assertEqual(directive.render(envelope['result'])['routing_status'], 'PASS')
+
+    def test_pcbw_r07_forged_pass_cannot_bypass_conformance_or_renderer(self):
+        result = engine.evaluate(self.humanize(self.make('run_command'),
+                                               'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
+        forged = copy.deepcopy(result)
+        semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
+        forged['source_request']['required_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
+        forged['execution_plan'][0]['assigned_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
+        forged['semantic_fingerprint'] = engine.fingerprint(forged)
+        forged['routing_result_id'] = 'routing-' + forged['semantic_fingerprint']
+
+        with self.assertRaises(RuntimeError):
+            engine.validate_internal_conformance(forged)
+        rendered = directive.render(forged)
+        self.assertNotEqual(rendered['routing_status'], 'PASS')
+        self.assertIsNone(rendered['directive'])
+
+        raw_matching_directive = directive._render(forged)
+        self.assertEqual(directive_conformance.validate_directive_conformance(
+            forged, raw_matching_directive)['status'], 'FAIL')
+        with patch('directive_conformance.verify_result', return_value={'routing_status': 'PASS'}):
+            independently_checked = directive_conformance.validate_directive_conformance(
+                forged, raw_matching_directive)
+        self.assertEqual(independently_checked['status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
+                      independently_checked['failure_codes'])
+
+    def test_pcbw_r07_malformed_semantics_remain_schema_invalid(self):
+        for mutation in ('missing', 'empty'):
+            with self.subTest(mutation=mutation):
+                semantics = human_semantics('run_command')
+                if mutation == 'missing':
+                    del semantics['value']['human_decision_required']
+                else:
+                    semantics['value']['human_decision_required'] = '   '
+                request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
+                                        semantics=semantics)
+                with self.assertRaises(InvalidDocument):
+                    validate(request, 'routing-request')
 
     def test_explicit_valid_selection(self):
         request = self.make('run_tests')

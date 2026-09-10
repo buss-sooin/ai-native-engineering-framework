@@ -173,6 +173,42 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(validation['status'], 'FAIL')
         self.assertIn('HUMAN_EXECUTION_SEMANTICS_MISMATCH', validation['failure_codes'])
 
+    def test_pcbw_r07_identifier_only_fixture_blocks_end_to_end_emission(self):
+        semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'BLOCKED_BY_ROUTING')
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_malformed_semantics_are_blocked_at_request_boundary(self):
+        semantics = human_semantics('run_command')
+        del semantics['value']['expected_interpretation']
+        request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
+        self.assertEqual(envelope['integration_diagnostics'][0]['code'], 'ROUTING_REQUEST_INVALID')
+        self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_concise_interface_emits_with_descriptive_context(self):
+        semantics = known({
+            'goal': 'MySQL 복구 후 persistence가 정상 재개됐는지 판단한다.',
+            'primary_operational_interface': 'Grafana',
+            'what_to_observe': ['대상 barcode cohort가 실제 table에 저장되는지 확인한다.'],
+            'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
+            'expected_interpretation': 'DB health와 실제 persistence 결과가 모두 확인되어야 복구 완료다.',
+            'cli_fallback': nr(),
+        })
+        request = self.humanize(self.make('run_command'),
+                                'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+        self.assertEqual(envelope['emission_outcome'], 'EMITTED')
+        self.assertIsNotNone(envelope['directive'])
+
     def test_invalid_request_and_profile_are_integration_blocked(self):
         invalid_request = copy.deepcopy(self.request)
         del invalid_request['project']

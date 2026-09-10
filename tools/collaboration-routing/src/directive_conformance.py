@@ -8,6 +8,7 @@ import html
 import json
 
 from engine import verify_result
+from semantic_sufficiency import human_execution_projection_issues
 
 
 HEADER_FIELDS = (
@@ -177,6 +178,11 @@ def validate_directive_conformance(result, text, timeout_seconds=5.0):
             if position + 3 >= len(lines) or lines[position + 1] != '```json' or lines[position + 3] != '```':
                 return _failure('DIRECTIVE_STRUCTURE_INVALID', 'Invalid JSON block for section: ' + title)
             actual_value = _parse_json(lines[position + 2])
+            if title == 'Human Execution Responsibility':
+                issues = human_execution_projection_issues(actual_value)
+                if issues:
+                    return _failure('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
+                                    'Insufficient Human-facing fields: ' + ', '.join(issues))
             if actual_value != expected_value:
                 return _failure(mismatch_code, title + ' differs from the Routing Result or immutable request context.')
             position += 4

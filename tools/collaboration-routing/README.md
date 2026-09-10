@@ -175,7 +175,11 @@ Routing Request → Integration Adapter → Request Validation
 | 사람 실행 + 사람 대상 운영 의미 미확정 | `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT` |
 | 승인된 다른 사람 필요성 근거 + 완전한 운영 의미 | 기존 역량·effect·권한·경계 검증을 계속 수행하고 모두 충족하면 `PASS` |
 
-사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션으로 이를 명시하며 독립 Directive Validator가 전체 내용을 Routing Result와 대조한다. Engine의 `FAIL`·`UNRESOLVED`는 Renderer 호출 전에 차단되고 독립 Validator의 `FAIL`도 방출되지 않는다.
+사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 구조가 존재하는 것만으로 충분성을 인정하지 않는다. 목표·관측·판단·기대 해석과 `KNOWN` CLI 대체 절차는 내부 식별자·제어 상태·플레이스홀더를 제외하고 운영 의미를 설명하는 단어가 둘 이상이어야 하며, 해당 단어의 전체 길이가 6자 이상이어야 한다. 반면 주 운영 인터페이스는 `Grafana`, `RedisInsight`, `Terminal`처럼 하나의 실제 도구 이름만으로도 유효하다. 각 관측 항목은 독립적으로 이 기준을 충족해야 한다.
+
+분류기는 자연어의 진실성이나 문장 품질을 판단하지 않는다. `FS-07`, `C0`, `00C` 같은 내부 식별자, phase·gate·step 표식, `PASS`·`FAIL`·`UNRESOLVED` 같은 상태값과 `TODO`·`TBD`·`N/A`·`placeholder`·`test` 같은 대체 문구만으로 구성됐는지를 제한된 어휘와 형식으로 결정론적으로 판별한다. 구조적으로 유효하지만 이 최소 계약을 충족하지 못하면 `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT`다.
+
+Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션으로 이를 명시한다. Engine과 내부 적합성 검사는 동일한 최소 계약을 각각 적용하며, 독립 Directive Validator도 렌더링된 섹션 자체를 직접 검사한 뒤 Routing Result와 대조한다. 따라서 잘못된 Routing Result와 같은 잘못된 지시문이 일치하더라도 적합해지지 않는다. Engine의 `FAIL`·`UNRESOLVED`, Renderer 검증 실패와 독립 Validator의 `FAIL`은 모두 방출되지 않는다.
 
 ## 결과 재검증과 의미 지문
 
@@ -285,10 +289,16 @@ Regression H의 입력은 `kind=reason_context`, 선언 effect `REPOSITORY_MUTAT
 
 ## Design 67: PCBW-R07 정본화 및 결정론적 방출 집행
 
-`HG-67-01 = PASS`에 따라 PCBW-R07을 Effective PCBW Definition에 추가하고 기존 Engine의 action 판정 경계에 연결했다. 현재 계약 버전은 Routing Schema `1.1`, Engine·Integration `0.2.0`, Framework Lab 프로필 `0.2.0`이다. 프로필 의미를 같은 ID/version에 덮어쓰지 않도록 `framework-lab.v0.1.0.json`을 `framework-lab.v0.2.0.json`으로 승격했다.
+`HG-67-01 = PASS`에 따라 PCBW-R07을 Effective PCBW Definition에 추가하고 기존 Engine의 action 판정 경계에 연결했다. 최초 구현 리비전의 계약 버전은 Routing Schema `1.1`, Engine·Integration `0.2.0`, Framework Lab 프로필 `0.2.0`이었다. 프로필 의미를 같은 ID/version에 덮어쓰지 않도록 `framework-lab.v0.1.0.json`을 `framework-lab.v0.2.0.json`으로 승격했다.
 
 프로필 action의 `actor`는 기본 책임이고 요청의 `actor`는 선택된 실행 책임이다. 책임 재배정은 action의 역량·effect·권한·실행 경계를 약화하지 않는다. Human IDE / Terminal에는 사람의 정당한 명령 실행을 표현할 수 있도록 `command_execution`과 `COMMAND_EXECUTION`을 추가했지만, 결정론적 명령을 사람에게 배정할 때는 사람 필요성 근거와 운영 의미를 별도로 검증한다. 적합하고 권한 있는 Codex가 존재하는데 `NO_SUITABLE_AUTHORIZED_AI_SURFACE`를 주장하면 `INVALID_HUMAN_DELEGATION`으로 실패한다.
 
 전체 71개 테스트 메서드와 내부 하위 사례가 통과했다. 신규 회귀는 결정론적 사전 점검·반복 폴링·정합성 확인·경계가 정해진 술어 기반 상태 전이·현재 Chat의 shell 부재를 사람 명령 전달로 바꾸는 false-PASS, 여섯 사람 필요성 근거의 유효 경로, basis 누락, 영향 부분 재평가 미확인, 사람 대상 운영 의미 누락·변조 및 `FAIL`·`UNRESOLVED` 방출 차단을 포함한다. 기존 Regression A–I와 정상 단일·복합 PCBW-R01~R06 경로도 함께 통과했다.
 
 Framework Governance와 Failure Reproduction Workflow·Conformance·Reproduction Record Template은 변경하지 않았다. 자동 orchestration, 실행 어댑터와 범용 세션 번호 규칙을 추가하지 않았다.
+
+## Review 69 교정: 사람 대상 의미 충분성
+
+독립 검토에서 `FS-07 / C0 / Gate PASS / C1 / PASS`처럼 필수 필드가 비어 있지 않다는 이유만으로 Engine과 지시문 방출이 `PASS`하는 결함이 확인됐다. 교정 후 현재 버전은 Routing Schema `1.1`, Engine·Integration `0.2.1`, Framework Lab 프로필 `0.2.0`이다. 요청 스키마는 필수 구조와 공백 값을 차단하고, `semantic_sufficiency.py`의 순수 결정론적 판정은 구조적으로 유효한 값의 최소 운영 의미를 Engine·내부 적합성 검사·독립 Directive Validator에 공통 적용한다. Renderer는 의미를 보완하거나 설명을 발명하지 않으며, 검증되지 않은 `PASS` 결과를 독립 호출해도 지시문을 만들지 않는다.
+
+프로필의 실제 action 모델에서 사전 점검은 `run_tests`, 반복 상태 확인·정합성 확인·술어 기반 전이·명령 실행은 `run_command`로 표현된다. 인위적인 action 종류를 추가하지 않고 `objective`, `session_role`, `verification_requirement`, `source_references`로 각 실행 의미를 구분해 회귀를 검증한다. 전체 79개 테스트 메서드는 식별자·상태·플레이스홀더·부분 의미의 차단, 위조된 `PASS`의 내부/Renderer/독립 검증 차단, 통합 비방출, 간결한 실제 인터페이스와 정당한 Human Direct Engineering의 정상 방출을 포함한다. 이 교정은 정본 PCBW-R07의 의미를 변경하지 않는다.

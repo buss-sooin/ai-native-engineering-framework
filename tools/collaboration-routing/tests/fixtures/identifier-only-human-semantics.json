@@ -1,0 +1,15 @@
+{
+  "state": "KNOWN",
+  "value": {
+    "goal": "FS-07",
+    "primary_operational_interface": "C0",
+    "what_to_observe": [
+      "Gate PASS"
+    ],
+    "human_decision_required": "C1",
+    "expected_interpretation": "PASS",
+    "cli_fallback": {
+      "state": "NOT_REQUIRED"
+    }
+  }
+}

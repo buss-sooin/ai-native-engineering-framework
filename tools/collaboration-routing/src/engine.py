@@ -5,8 +5,9 @@ import math
 import time
 
 from schema_validation import InvalidDocument, canonical, validate
+from semantic_sufficiency import HUMAN_NECESSITY_BASES, human_facing_semantics_issues
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 RESOLUTIONS = {
     'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',
@@ -24,14 +25,6 @@ RESOLUTIONS = {
     'INTERNAL_RESOLUTION': ('VALIDATOR_ERROR', 'VALIDATOR_TIMEOUT'),
 }
 
-HUMAN_NECESSITY_BASES = {
-    'HUMAN_AUTHORITY_REQUIRED',
-    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE',
-    'HUMAN_RISK_CONTROL_REQUIRED',
-    'HUMAN_LEARNING_OBJECTIVE',
-    'HUMAN_EXECUTION_SIMPLER_OR_SAFER',
-    'NO_SUITABLE_AUTHORIZED_AI_SURFACE',
-}
 RESOLUTION_INSTRUCTIONS = {
     'INPUT_COMPLETION': 'Complete or correct structured input, then revalidate.',
     'ENVIRONMENT_RESOLUTION': 'Resolve profile, availability or capability/effect fit, then revalidate; do not lower requirements.',
@@ -134,7 +127,7 @@ def validate_internal_conformance(result):
             basis = action.get('human_necessity_basis', {'state': 'UNKNOWN'})
             semantics = action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
             valid = valid and basis['state'] == 'KNOWN' and basis.get('value') in HUMAN_NECESSITY_BASES
-            valid = valid and semantics['state'] == 'KNOWN'
+            valid = valid and not human_facing_semantics_issues(semantics)
             if basis.get('value') == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
                 reevaluation = action.get('targeted_re_evaluation_established', {'state': 'UNKNOWN'})
                 valid = valid and reevaluation == {'state': 'KNOWN', 'value': True}
@@ -317,7 +310,7 @@ def _evaluate(request, profile, deadline):
             basis = basis_field.get('value') if basis_field['state'] == 'KNOWN' else None
             if basis is None:
                 unresolved('HUMAN_NECESSITY_BASIS_MISSING', aid)
-            if semantics_field['state'] != 'KNOWN':
+            if human_facing_semantics_issues(semantics_field):
                 fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
             if basis == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
                 if reevaluation_field != {'state': 'KNOWN', 'value': True}:
