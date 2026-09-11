@@ -29,11 +29,11 @@ Python 3.8 이상의 표준 라이브러리만 사용한다. 외부 패키지 �
 ```sh
 python3 tools/collaboration-routing/src/cli.py route \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
 
 python3 tools/collaboration-routing/src/integration_cli.py \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
 
 python3 -m unittest discover -s tools/collaboration-routing/tests -v
 ```
@@ -80,7 +80,7 @@ Routing Request → Integration Adapter → Request Validation
 | `schemas/routing-request.schema.json` | 필수 행위와 명시적 입력 상태 |
 | `schemas/project-routing-profile.schema.json` | 프로젝트의 행위·역량·환경 매핑 |
 | `schemas/routing-result.schema.json` | 기계 소비용 결과 계약 |
-| `profiles/framework-lab.v0.2.0.json` | Framework Lab의 PCBW-R07을 포함한 버전 지정 매핑과 가용성 선언 |
+| `profiles/framework-lab.v0.3.0.json` | Framework Lab의 PCBW-R07 action handoff·운영 인터페이스·가용성 선언 |
 | `src/schema_validation.py` | 번들 스키마에서 사용하는 JSON Schema 부분집합 검증 |
 | `src/engine.py` | 라우팅, 책임 배분, 권한·경계 검증 및 내부 적합성 검사 |
 | `src/directive.py` | 결정론적 표현과 지시문 적합성 검증 |
@@ -96,7 +96,7 @@ Routing Request → Integration Adapter → Request Validation
 
 `Routing Decision ≠ Authority`, `Routing Result ≠ Directive`, `Directive ≠ Execution`을 유지한다. 운반 어댑터(Execution Adapter)는 포함하지 않는다.
 
-통합 Adapter는 Routing Request의 자연어로 결정 필드를 다시 만들지 않는다. 실행 환경, 세션 역할, 책임, 권한 평가, 모델·추론 추천과 Route Leg는 검증된 Routing Result만 따른다. 목표와 설명 같은 맥락 값은 Engine이 보존한 `source_request`에서만 읽는다. `Available ≠ Selected ≠ Authorized`와 `Recommended ≠ Selected ≠ Authorized`를 유지한다.
+통합 Adapter는 Routing Request의 자연어로 결정 필드를 다시 만들지 않는다. 실행 환경, 세션 역할, 책임, 권한 평가, 모델·추론 추천과 Route Leg는 검증된 Routing Result만 따른다. 일반 요청 맥락은 Engine이 보존한 `source_request`에서 읽지만, PCBW-R07 Human Execution Responsibility의 필수 설명과 인터페이스는 `source_profile`의 신뢰 선언과 해석된 Route Leg에서 생성한다. `Available ≠ Selected ≠ Authorized`와 `Recommended ≠ Selected ≠ Authorized`를 유지한다.
 
 ## 통합 실패 차단과 근거
 
@@ -122,7 +122,7 @@ Routing Request → Integration Adapter → Request Validation
 
 중단 조건·근거 요구·브랜치/리비전/환경은 적용되지 않을 때 `NOT_REQUIRED`를 허용한다. 적용 여부를 아직 모르는 `UNKNOWN`은 보수적으로 `UNRESOLVED`다. `surface_selection=NOT_REQUIRED`는 명시적 선택 없이 프로필로 선택하라는 뜻이다. `KNOWN`이면 모든 action ID를 한 번씩 지정해야 한다.
 
-각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수이며, `human_facing_semantics.value.structured_operational_semantics`가 action·target·capability·surface·verification 구조를 참조해야 한다. 누락이나 미확정은 Engine의 `UNRESOLVED` 또는 `FAIL` 판정 대상이다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
+각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수다. `human_facing_semantics`에는 구조화된 신뢰 reference와 선택적인 `supplemental_note`만 허용한다. action·target·capability·surface·verification binding이나 Profile interface 해석이 실패하면 `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT`다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
 
 프로필 요청은 정확한 ID·버전으로 지정한다. 다른 버전이 제공되면 `PROFILE_VERSION_UNAVAILABLE`이며 암묵적으로 최신 버전으로 교체하지 않는다. 정본 충돌 상태는 `CLEAR / CONFLICT / UNKNOWN`으로 구분하며, 충돌 또는 미확정은 `CANONICAL_CONFLICT`로 반환한다.
 
@@ -141,7 +141,7 @@ Routing Request → Integration Adapter → Request Validation
 | `observe_runtime` | `runtime_observation` | Human IDE / Terminal |
 | `mutate_runtime` | `runtime_mutation` | Human IDE / Terminal |
 
-프로필은 Local Trial에 제공된 개념적 환경 매핑과 가용성 선언이다. 실제 제품 접근·계정 권한·접속 상태를 탐지한 결과가 아니다. 호출자는 현재 환경의 가용성을 확인하고 변경한 프로필은 새 버전으로 관리해야 한다. 모델·추론 추천은 이 시험 프로필에서 `Surface-managed / N/A`로 두며 특정 모델 선택 알고리즘은 포함하지 않는다.
+프로필은 Local Trial에 제공된 개념적 환경 매핑과 가용성 선언이다. `actions[].human_handoff`는 action 종류별 Human Goal·관측·판단·기대 해석의 신뢰 가능한 설명을 제공한다. `operational_interfaces`는 named interface의 표시 이름, 호환 Human surface와 적용 capability를 선언한다. 제품명은 Framework 코드 allowlist가 아니라 버전이 지정된 프로젝트 Profile 데이터로 관리한다. 실제 제품 접근·계정 권한·접속 상태를 탐지한 결과는 아니며, 호출자는 현재 환경의 가용성을 확인하고 변경한 프로필은 새 버전으로 관리해야 한다. 모델·추론 추천은 이 시험 프로필에서 `Surface-managed / N/A`로 두며 특정 모델 선택 알고리즘은 포함하지 않는다.
 
 환경은 행위에 필요한 **모든** 역량과 effect, 요청에서 선택한 AI/HUMAN 책임 및 `KNOWN true` 가용성을 충족해야 후보가 된다. 프로필 action의 `actor`는 기본 책임이며, 정당한 사람 직접 수행을 선택할 때는 동일한 역량·effect 계약을 유지한 채 `actor=HUMAN`으로 재배정할 수 있다. `required_capabilities ⊆ surface.capabilities`와 `required_effects ⊆ surface.supported_effects`는 독립적으로 검사한다. 둘 다 위반하면 두 진단을 보존한다. 권한이 `AUTHORIZED`라도 `SURFACE_EFFECT_MISMATCH`를 면제하지 않는다. 실효 effect는 프로필의 행위별 최소 effect와 요청의 명시적 effect를 합친 값이다. 요청이 최소 effect를 지우거나 추가 변경 effect의 권한 검사를 우회할 수 없다. 후보 중 명시적 선택이 있으면 이를 검증한다. 없으면 프로필의 `preferred_surfaces` 순서를 동률 해소 기준으로 사용한다. 선호 후보가 없을 때 유일한 적합 후보만 선택하며 여러 후보가 남으면 `AMBIGUOUS_SURFACE_SELECTION`이다. 필요한 역량을 갖추지 못한 환경으로의 하향 대체는 없다.
 
@@ -175,11 +175,11 @@ Routing Request → Integration Adapter → Request Validation
 | 사람 실행 + 사람 대상 운영 의미 미확정 | `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT` |
 | 승인된 다른 사람 필요성 근거 + 완전한 운영 의미 | 기존 역량·effect·권한·경계 검증을 계속 수행하고 모두 충족하면 `PASS` |
 
-사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 자유 텍스트는 사람이 책임을 이해하기 위한 표현이지만 PASS의 근거가 아니다. `structured_operational_semantics`는 목표를 action ID와 action target에, 관측을 profile capability와 action verification requirement에, 사람 판단을 action verification requirement에, 기대 해석을 request verification contract에 결합한다. Interface는 선택된 surface에 결합된 `SELECTED_EXECUTION_SURFACE` 또는 일반 `NAMED_OPERATIONAL_INTERFACE`로 식별한다. 적용 가능한 CLI 대체 절차도 구조적으로 `KNOWN / NOT_REQUIRED` 상태와 인터페이스를 명시한다.
+사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 필수 설명은 Profile action의 `human_handoff`와 실제 target·capability·verification context에서 결정론적으로 생성한다. 요청이 제공할 수 있는 `supplemental_note`는 별도 표시만 하며 필수 의미를 만들거나 덮어쓰지 않는다. Interface는 실제 선택 surface를 참조하는 `SELECTED_EXECUTION_SURFACE` 또는 Profile registry를 참조하는 `PROFILE_OPERATIONAL_INTERFACE`만 허용한다. 요청은 interface 표시 이름을 선언할 수 없다. CLI fallback도 같은 reference로 해석하거나 `NOT_REQUIRED`로 명시한다.
 
-Engine은 binding의 action ID, target state, capability 집합, 선택 surface, action 검증 요구와 request 검증 계약을 실제 요청·프로필 계산 결과와 대조한다. 따라서 새로운 `review`, `report`, `assessment` 같은 단어를 자유 텍스트에 추가해도 binding이 없거나 불일치하면 의미 충분성을 만들 수 없다. 제한된 어휘 검사는 공백, 명백한 placeholder, 공식 상태, 알려진 내부 식별자와 이를 섞은 Interface를 차단하는 심층 방어(Defense in Depth)만 담당한다. 자연어의 진실성이나 문장 품질은 판단하지 않으며, 제품 allowlist도 사용하지 않는다.
+Engine은 action ID, target state, capability 집합, 선택 surface, action 검증 요구를 실제 요청·Profile 계산 결과와 대조한다. named interface reference는 선택 Profile에 존재하고 실제 Human surface 및 전체 action capability와 호환되어야 한다. Profile의 Human handoff 설명은 불투명한 ID만으로 구성되지 않도록 최소 구조를 검증한다. 따라서 `banana`, 새로운 동의어 또는 요청 내부의 중복 self-declaration은 신뢰를 만들 수 없다. 자연어의 진실성이나 외부 제품 존재 여부는 판단하지 않는다.
 
-Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션에 사람이 읽는 설명과 `Structured Operational Semantics`를 함께 투영한다. 구조는 설명을 대체하지 않으며 Renderer는 누락된 의미를 발명하지 않는다. Engine과 내부 적합성 검사는 같은 구조 계약을 실제 라우팅 문맥과 대조하고, 독립 Directive Validator도 렌더링된 구조와 사람이 읽는 Interface binding을 다시 검증한다. 따라서 잘못된 Routing Result와 같은 잘못된 지시문이 일치하더라도 적합해지지 않는다. Engine의 `FAIL`·`UNRESOLVED`, Renderer 검증 실패와 독립 Validator의 `FAIL`은 모두 방출되지 않는다.
+Human Route Leg가 있으면 Renderer는 검증된 Profile과 Route Leg로 `Human Execution Responsibility`를 다시 해석한다. Human Goal에는 trusted action 설명과 실제 target, 관측에는 trusted 설명·target·capability·verification requirement, 판단과 기대 해석에는 Profile handoff 설명을 투영한다. Interface와 fallback 표시 이름도 Profile 또는 선택 surface에서 해석한다. 독립 Directive Validator가 같은 신뢰 문맥에서 예상 책임을 재구성하므로, 결과와 지시문이 같은 임의 문자열을 담았다는 사실만으로 적합해지지 않는다. Engine의 `FAIL`·`UNRESOLVED`, Renderer 검증 실패와 독립 Validator의 `FAIL`은 모두 방출되지 않는다.
 
 ## 결과 재검증과 의미 지문
 
@@ -208,7 +208,7 @@ python3 tools/collaboration-routing/src/cli.py validate-directive \
 ```sh
 python3 tools/collaboration-routing/src/cli.py validate-schema \
   --kind project-routing-profile \
-  --document tools/collaboration-routing/profiles/framework-lab.v0.2.0.json
+  --document tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
 ```
 
 `validate-schema`의 `PASS`는 `SCHEMA_ONLY`로 표시하며 실행 가능한 결과의 의미 검증을 뜻하지 않는다. 프로필의 경우 중복 식별자·참조·권한 면제도 함께 검사한다. 라우팅과 지시문의 의미 검증은 `route`와 `validate-directive`를 사용한다.
@@ -316,3 +316,11 @@ Framework Governance와 Failure Reproduction Workflow·Conformance·Reproduction
 `structured_operational_semantics`는 action ID, `ACTION_TARGET`, 선택 surface에 귀속된 Interface, profile capability 집합, `ACTION_VERIFICATION_REQUIREMENT`, `REQUEST_VERIFICATION_CONTRACT`와 CLI fallback 상태를 별도 책임으로 표현한다. Engine은 참조를 실제 문맥과 대조하고, 내부 적합성 검사와 독립 Directive Validator도 재계산된 결과와 렌더링된 binding을 검증한다. `1.1` Human request처럼 binding이 없는 이전 형식은 `1.2` 요청 스키마에서 거부되며 지시문을 방출하지 않는다.
 
 전체 93개 테스트 메서드는 세 exploit 계열, 자유 텍스트 동의어 불변성, binding 누락·변조, fingerprint를 다시 계산한 위조 `PASS`, Renderer와 독립 Validator 차단을 검증한다. 한국어 prefix 기반 제거를 없애고 exact control vocabulary만 심층 방어에 사용하므로 `작업자`, `실행기`, `상태머신`, `관측기`는 valid binding이 있으면 허용된다. `Grafana`, `Terminal`, `RedisInsight`, `MySQL Workbench`, `Kafka UI`, `IntelliJ IDEA`, `psql`, `redis-cli`도 제품 allowlist 없이 구조화된 named Interface로 허용한다. 이 교정은 정본 PCBW-R07의 의미를 변경하지 않는다.
+
+## 신뢰 가능한 구조화 Human handoff 교정
+
+`0.3.0`은 action·target·capability reference를 검증했지만 요청이 `NAMED_OPERATIONAL_INTERFACE`의 ID와 표시 이름을 직접 선언할 수 있었다. 따라서 `banana`를 모든 설명과 interface에 반복한 self-declaration도 통과했다. `0.4.0`은 이 신뢰 원천을 제거한다. Routing Request·Result Schema는 `1.3`, Project Routing Profile Schema는 `1.2`, Framework Lab Profile은 `0.3.0`으로 승격했다.
+
+필수 Human 설명은 `actions[].human_handoff`에서, named interface는 `operational_interfaces`에서 해석한다. Request는 `SELECTED_EXECUTION_SURFACE` 또는 `PROFILE_OPERATIONAL_INTERFACE`의 ID만 참조하며 display name을 선언하지 않는다. Profile interface는 실제 선택 Human surface와 전체 action capability에 모두 호환되어야 한다. CLI fallback도 동일한 신뢰 reference를 사용한다. 기존 여섯 설명 필드는 Request 1.3에서 제거했고 임의 문맥은 `supplemental_note`로만 보존한다. Renderer와 독립 Validator는 신뢰 문맥에서 동일한 사람 책임을 재구성한다.
+
+이전 Schema 1.1과 취약한 1.2 Human request는 자동 변환하지 않고 입력 경계에서 비방출한다. 전체 98개 테스트 메서드는 세 기존 exploit, `banana`, fallback mismatch, interface 소유권·surface·capability, 잘못된 action·target·verification binding, 위조 PASS, 한국어 기술 명사와 선택 surface/GUI/CLI 정상 경로를 검증한다. 이 Profile registry는 Collaboration Routing Engine의 프로젝트 데이터이며 새 PCBW 정본 요소가 아니다.

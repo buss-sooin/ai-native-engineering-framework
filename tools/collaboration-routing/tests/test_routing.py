@@ -36,26 +36,21 @@ CAPABILITIES = {
 }
 
 
-def structured_semantics(action_id, capabilities, interface='Human IDE / Terminal',
-                         interface_id='human-terminal', interface_kind='SELECTED_EXECUTION_SURFACE',
-                         cli_fallback=True):
+def structured_semantics(action_id, capabilities, interface_id='human-terminal',
+                         interface_source='SELECTED_EXECUTION_SURFACE', cli_fallback=True):
     return known({
         'action_id': action_id,
         'target_reference': 'ACTION_TARGET',
-        'interface': {
-            'kind': interface_kind, 'id': interface_id,
-            'display_name': interface, 'surface_id': 'human-terminal',
-        },
+        'interface_reference': {'source': interface_source, 'id': interface_id},
         'observation': {
             'target_reference': 'ACTION_TARGET',
             'capability_ids': list(capabilities),
             'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
         },
         'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
-        'interpretation_reference': 'REQUEST_VERIFICATION_CONTRACT',
+        'interpretation_reference': 'PROFILE_ACTION_HUMAN_HANDOFF',
         'cli_fallback': known({
-            'kind': 'NAMED_OPERATIONAL_INTERFACE', 'id': 'terminal',
-            'display_name': 'Terminal', 'surface_id': 'human-terminal',
+            'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': 'redis-cli',
         }) if cli_fallback else nr(),
     })
 
@@ -63,19 +58,15 @@ def structured_semantics(action_id, capabilities, interface='Human IDE / Termina
 def human_semantics(kind, action_id='a0', capabilities=None):
     capabilities = CAPABILITIES[kind] if capabilities is None else capabilities
     return known({
-        'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
-        'primary_operational_interface': 'Human IDE / Terminal',
-        'what_to_observe': ['Observe repository output, runtime metrics, and recorded evidence.'],
-        'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
-        'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
-        'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
         'structured_operational_semantics': structured_semantics(action_id, capabilities),
+        'supplemental_note': known(
+            'Additional operator context for the ' + kind + ' responsibility.'),
     })
 
 
 class RoutingTests(unittest.TestCase):
     def setUp(self):
-        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.2.0.json')
+        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.3.0.json')
         self.request = load_json(ROOT / 'tests/fixtures/inspection.request.json')
 
     def make(self, *kinds):
@@ -306,7 +297,7 @@ class RoutingTests(unittest.TestCase):
         result = engine.evaluate(self.humanize(self.make('run_command'),
                                                'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
         text = directive.render(result)['directive']
-        changed = text.replace('Inspect repository and runtime evidence for the run_command responsibility.',
+        changed = text.replace('Execute the approved command against the resolved target and determine whether it completed safely.',
                                'Relay an unexplained command.', 1)
         self.assertBlocked(directive.validate_directive(result, changed), 'FAIL', 'MATERIAL_DIRECTIVE_DRIFT')
 
@@ -314,83 +305,96 @@ class RoutingTests(unittest.TestCase):
         semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
-        validate(request, 'routing-request')
-        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
-                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+        with self.assertRaises(InvalidDocument):
+            validate(request, 'routing-request')
 
     def test_pcbw_r07_combined_control_meta_semantics_fail_closed(self):
         semantics = load_json(ROOT / 'tests/fixtures/combined-control-meta-human-semantics.json')
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
-        validate(request, 'routing-request')
-        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
-                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+        with self.assertRaises(InvalidDocument):
+            validate(request, 'routing-request')
 
     def test_pcbw_r07_review_report_semantics_require_structured_bindings(self):
         semantics = load_json(ROOT / 'tests/fixtures/review-report-human-semantics.json')
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
-        validate(request, 'routing-request')
-        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
-                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+        with self.assertRaises(InvalidDocument):
+            validate(request, 'routing-request')
 
-    def test_pcbw_r07_control_placeholder_and_mixed_semantics_fail(self):
-        cases = (
-            ('identifier-only', 'goal', 'FS-07'),
-            ('status-only', 'human_decision_required', 'UNRESOLVED'),
-            ('placeholder-only', 'expected_interpretation', 'TODO'),
-            ('phase-gate-step-only', 'what_to_observe', ['Phase A Gate PASS STEP-3']),
-            ('mixed-identifiers', 'goal', 'FS-07 C0 Gate PASS Phase A STEP-3'),
-            ('identifier-interface', 'primary_operational_interface', 'C0'),
-            ('placeholder-fallback', 'cli_fallback', known('TBD')),
+    def test_pcbw_r07_trusted_reference_and_binding_mutations_fail(self):
+        mutations = (
+            lambda value: value['interface_reference'].update(id='banana'),
+            lambda value: value['interface_reference'].update(id='codex'),
+            lambda value: value['observation'].update(capability_ids=['runtime_observation']),
+            lambda value: value.update(action_id='other'),
+            lambda value: value.update(target_reference='OTHER'),
+            lambda value: value['observation'].update(verification_reference='OTHER'),
+            lambda value: value.update(decision_criterion_reference='OTHER'),
+            lambda value: value['cli_fallback']['value'].update(id='banana'),
         )
-        for label, field, value in cases:
-            with self.subTest(label=label):
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
                 semantics = human_semantics('run_command')
-                semantics['value'][field] = value
+                mutate(semantics['value']['structured_operational_semantics']['value'])
                 request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
                                         semantics=semantics)
-                self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
-                                   'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+                envelope = engine.evaluate(request, self.profile)
+                self.assertNotEqual(envelope['routing_status'], 'PASS', envelope)
+                self.assertIsNone(envelope['directive'])
 
-    def test_pcbw_r07_concise_operational_interfaces_remain_valid(self):
-        for interface in ('MySQL Workbench', 'Grafana'):
-            with self.subTest(interface=interface):
-                semantics = known({
-                    'goal': 'MySQL 복구 후 persistence가 정상 재개됐는지 판단한다.',
-                    'primary_operational_interface': interface,
-                    'what_to_observe': ['대상 barcode cohort가 실제 table에 저장되는지 확인한다.'],
-                    'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
-                    'expected_interpretation': 'DB health뿐 아니라 실제 persistence 결과까지 확인되어야 복구 완료다.',
-                    'cli_fallback': nr(),
-                    'structured_operational_semantics': structured_semantics(
-                        'a0', ['command_execution'], interface,
-                        interface.casefold().replace(' ', '-'), 'NAMED_OPERATIONAL_INTERFACE', False),
-                })
-                request = self.humanize(self.make('run_command'),
+    def test_pcbw_r07_trusted_operational_interfaces_remain_valid(self):
+        cases = (
+            ('run_command', 'human-terminal', 'SELECTED_EXECUTION_SURFACE'),
+            ('observe_runtime', 'grafana', 'PROFILE_OPERATIONAL_INTERFACE'),
+            ('run_command', 'redis-cli', 'PROFILE_OPERATIONAL_INTERFACE'),
+        )
+        for kind, interface_id, source in cases:
+            with self.subTest(kind=kind, interface_id=interface_id):
+                semantics = human_semantics(kind)
+                structured = semantics['value']['structured_operational_semantics']['value']
+                structured['interface_reference'] = {'source': source, 'id': interface_id}
+                request = self.humanize(self.make(kind),
                                         'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
                 envelope = engine.evaluate(request, self.profile)
                 self.assertEqual(envelope['routing_status'], 'PASS', envelope)
-                self.assertEqual(directive.render(envelope['result'])['routing_status'], 'PASS')
+                rendered = directive.render(envelope['result'])
+                self.assertEqual(rendered['routing_status'], 'PASS')
+                expected_name = {'human-terminal': 'Human IDE / Terminal',
+                                 'grafana': 'Grafana', 'redis-cli': 'redis-cli'}[interface_id]
+                self.assertIn(expected_name, rendered['directive'])
 
     def test_pcbw_r07_forged_pass_cannot_bypass_conformance_or_renderer(self):
         result = engine.evaluate(self.humanize(self.make('run_command'),
                                                'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
-        fixtures = (
-            'identifier-only-human-semantics.json',
-            'combined-control-meta-human-semantics.json',
-            'review-report-human-semantics.json',
+        mutations = (
+            ('unknown-interface', lambda value: value['interface_reference'].update(id='banana')),
+            ('wrong-surface', lambda value: value['interface_reference'].update(id='codex')),
+            ('capability-incompatible-interface', lambda value: value[
+                'interface_reference'].update(
+                    source='PROFILE_OPERATIONAL_INTERFACE', id='grafana')),
+            ('unknown-fallback', lambda value: value['cli_fallback']['value'].update(id='banana')),
+            ('capability-incompatible-fallback', lambda value: value[
+                'cli_fallback']['value'].update(id='grafana')),
+            ('wrong-capability', lambda value: value['observation'].update(
+                capability_ids=['runtime_observation'])),
+            ('wrong-action', lambda value: value.update(action_id='other')),
+            ('wrong-target-binding', lambda value: value.update(target_reference='OTHER')),
+            ('wrong-verification-binding', lambda value: value[
+                'observation'].update(verification_reference='OTHER')),
         )
-        for fixture in fixtures:
-            with self.subTest(fixture=fixture):
+        for label, mutate in mutations:
+            with self.subTest(label=label):
                 forged = copy.deepcopy(result)
-                semantics = load_json(ROOT / 'tests/fixtures' / fixture)
+                semantics = copy.deepcopy(forged['source_request']['required_actions'][0][
+                    'human_facing_semantics'])
+                mutate(semantics['value']['structured_operational_semantics']['value'])
                 forged['source_request']['required_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
                 forged['execution_plan'][0]['assigned_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
                 forged['semantic_fingerprint'] = engine.fingerprint(forged)
                 forged['routing_result_id'] = 'routing-' + forged['semantic_fingerprint']
 
-                with self.assertRaises(RuntimeError):
+                with self.assertRaises((RuntimeError, InvalidDocument)):
                     engine.validate_internal_conformance(forged)
                 rendered = directive.render(forged)
                 self.assertNotEqual(rendered['routing_status'], 'PASS')
@@ -407,13 +411,10 @@ class RoutingTests(unittest.TestCase):
                               independently_checked['failure_codes'])
 
     def test_pcbw_r07_malformed_semantics_remain_schema_invalid(self):
-        for mutation in ('missing', 'empty'):
-            with self.subTest(mutation=mutation):
+        for missing in ('structured_operational_semantics', 'supplemental_note'):
+            with self.subTest(missing=missing):
                 semantics = human_semantics('run_command')
-                if mutation == 'missing':
-                    del semantics['value']['human_decision_required']
-                else:
-                    semantics['value']['human_decision_required'] = '   '
+                del semantics['value'][missing]
                 request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
                                         semantics=semantics)
                 with self.assertRaises(InvalidDocument):
@@ -531,7 +532,22 @@ class RoutingTests(unittest.TestCase):
                 profile['surfaces'][0]['available'] = nr()
             else:
                 del profile['actions'][0]['deterministic']
-            self.assertBlocked(engine.evaluate(self.request, profile), 'FAIL', 'ROUTING_CONTRACT_CONTRADICTION')
+                self.assertBlocked(engine.evaluate(self.request, profile), 'FAIL', 'ROUTING_CONTRACT_CONTRADICTION')
+
+    def test_pcbw_r07_profile_interface_registry_is_structurally_trusted(self):
+        mutations = (
+            lambda profile: profile['operational_interfaces'][0][
+                'compatible_surface_ids'].append('missing-surface'),
+            lambda profile: profile['operational_interfaces'][0][
+                'capability_ids'].append('missing-capability'),
+            lambda profile: profile['actions'][0]['human_handoff'].update(goal='ACTION-07'),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                profile = copy.deepcopy(self.profile)
+                mutate(profile)
+                with self.assertRaises(InvalidDocument):
+                    engine.validate_profile(profile)
 
     def test_invalid_selections(self):
         for items in ([{'action_id': 'wrong', 'surface_id': 'work-mode'}],
@@ -818,7 +834,7 @@ class RoutingTests(unittest.TestCase):
     def test_review64_h_cli_has_no_executable_directive(self):
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-h.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.2.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.3.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertBlocked(json.loads(response.stdout), 'FAIL', 'SURFACE_EFFECT_MISMATCH')
 
@@ -847,7 +863,7 @@ class RoutingTests(unittest.TestCase):
         # The exact singleton diagnostic also excludes surface mismatch, explicit denial and unknown authority.
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-i.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.2.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.3.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertEqual(json.loads(response.stdout), envelope)
 

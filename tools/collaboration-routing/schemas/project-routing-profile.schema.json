@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:project-routing-profile:1.1",
+  "$id": "urn:collaboration-routing:project-routing-profile:1.2",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.1"
+        "1.2"
       ]
     },
     "id": {
@@ -74,6 +74,34 @@
             },
             "minItems": 0,
             "uniqueItems": true
+          },
+          "human_handoff": {
+            "type": "object",
+            "properties": {
+              "goal": {
+                "type": "string",
+                "minLength": 12
+              },
+              "observation": {
+                "type": "string",
+                "minLength": 12
+              },
+              "decision": {
+                "type": "string",
+                "minLength": 12
+              },
+              "expected_interpretation": {
+                "type": "string",
+                "minLength": 12
+              }
+            },
+            "required": [
+              "goal",
+              "observation",
+              "decision",
+              "expected_interpretation"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -83,7 +111,8 @@
           "actor",
           "deterministic",
           "authority_required",
-          "preferred_surfaces"
+          "preferred_surfaces",
+          "human_handoff"
         ],
         "additionalProperties": false
       },
@@ -207,6 +236,49 @@
       },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "operational_interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "compatible_surface_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "capability_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "compatible_surface_ids",
+          "capability_ids"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
     }
   },
   "required": [
@@ -215,7 +287,8 @@
     "version",
     "project",
     "actions",
-    "surfaces"
+    "surfaces",
+    "operational_interfaces"
   ],
   "additionalProperties": false
 }

@@ -5,9 +5,13 @@ import math
 import time
 
 from schema_validation import InvalidDocument, canonical, validate
-from semantic_sufficiency import HUMAN_NECESSITY_BASES, human_facing_semantics_issues
+from semantic_sufficiency import (
+    HUMAN_NECESSITY_BASES,
+    human_facing_semantics_issues,
+    is_human_usable_description,
+)
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
 RESOLUTIONS = {
     'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',
@@ -73,16 +77,35 @@ def validate_profile(profile):
     unique_ids(profile['actions'], 'kind')
     unique_ids(profile['surfaces'], 'id')
     unique_ids(profile['surfaces'], 'label')
+    unique_ids(profile['operational_interfaces'], 'id')
+    unique_ids(profile['operational_interfaces'], 'display_name')
     surface_ids = {s['id'] for s in profile['surfaces']}
+    surfaces = {s['id']: s for s in profile['surfaces']}
+    known_capabilities = {
+        capability
+        for item in profile['actions'] + profile['surfaces']
+        for capability in item['capabilities']
+    }
     for action in profile['actions']:
         if set(action['preferred_surfaces']) - surface_ids:
             raise InvalidDocument('preferred surface does not exist')
         # Project data cannot waive authorization for effects beyond read-only.
         if action['effects'] != ['READ_ONLY'] and not action['authority_required']:
             raise InvalidDocument('non-read-only effect requires authority')
+        if any(not is_human_usable_description(action['human_handoff'][field])
+               for field in ('goal', 'observation', 'decision', 'expected_interpretation')):
+            raise InvalidDocument('action human handoff must contain usable trusted descriptions')
     for surface in profile['surfaces']:
         if surface['available']['state'] == 'NOT_REQUIRED':
             raise InvalidDocument('surface availability cannot be NOT_REQUIRED')
+    for interface in profile['operational_interfaces']:
+        if set(interface['compatible_surface_ids']) - surface_ids:
+            raise InvalidDocument('operational interface surface does not exist')
+        if any(surfaces[sid]['actor'] != 'HUMAN'
+               for sid in interface['compatible_surface_ids']):
+            raise InvalidDocument('operational interface requires Human-compatible surfaces')
+        if set(interface['capability_ids']) - known_capabilities:
+            raise InvalidDocument('operational interface capability does not exist')
 
 
 def validate_internal_conformance(result):
@@ -128,7 +151,9 @@ def validate_internal_conformance(result):
             semantics = action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
             valid = valid and basis['state'] == 'KNOWN' and basis.get('value') in HUMAN_NECESSITY_BASES
             valid = valid and not human_facing_semantics_issues(semantics, {
+                'profile': profile,
                 'action_id': action['id'],
+                'action_kind': step['kind'],
                 'action_target': action['target'],
                 'capabilities': step['required_capabilities'],
                 'verification_requirement': action['verification_requirement'],
@@ -365,7 +390,9 @@ def _evaluate(request, profile, deadline):
             bound_surface_id = choice or selected.get(aid)
             bound_surface = surfaces.get(bound_surface_id, {})
             if human_facing_semantics_issues(semantics_field, {
+                    'profile': profile,
                     'action_id': aid,
+                    'action_kind': kind,
                     'action_target': required.get('target'),
                     'capabilities': definition['capabilities'],
                     'verification_requirement': required.get('verification_requirement'),
@@ -398,7 +425,7 @@ def _evaluate(request, profile, deadline):
     chosen_ids = sorted({step['surface_id'] for step in plan})
     mode = ('COMPOSITE' if len(chosen_ids) > 1 else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
     result = {
-        'schema_version': '1.2', 'routing_result_id': 'pending', 'request_id': request['request_id'],
+        'schema_version': '1.3', 'routing_result_id': 'pending', 'request_id': request['request_id'],
         'routing_status': status, 'project': copy.deepcopy(request['project']),
         'destination_session_role': copy.deepcopy(request['destination_session_role']), 'route_mode': mode,
         'required_capabilities': sorted(capabilities), 'feasible_surfaces': feasible,

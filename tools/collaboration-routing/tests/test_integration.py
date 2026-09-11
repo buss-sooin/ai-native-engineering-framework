@@ -37,26 +37,21 @@ CAPABILITIES = {
 }
 
 
-def structured_semantics(action_id, capabilities, interface='Human IDE / Terminal',
-                         interface_id='human-terminal', interface_kind='SELECTED_EXECUTION_SURFACE',
-                         cli_fallback=True):
+def structured_semantics(action_id, capabilities, interface_id='human-terminal',
+                         interface_source='SELECTED_EXECUTION_SURFACE', cli_fallback=True):
     return known({
         'action_id': action_id,
         'target_reference': 'ACTION_TARGET',
-        'interface': {
-            'kind': interface_kind, 'id': interface_id,
-            'display_name': interface, 'surface_id': 'human-terminal',
-        },
+        'interface_reference': {'source': interface_source, 'id': interface_id},
         'observation': {
             'target_reference': 'ACTION_TARGET',
             'capability_ids': list(capabilities),
             'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
         },
         'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
-        'interpretation_reference': 'REQUEST_VERIFICATION_CONTRACT',
+        'interpretation_reference': 'PROFILE_ACTION_HUMAN_HANDOFF',
         'cli_fallback': known({
-            'kind': 'NAMED_OPERATIONAL_INTERFACE', 'id': 'terminal',
-            'display_name': 'Terminal', 'surface_id': 'human-terminal',
+            'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': 'redis-cli',
         }) if cli_fallback else nr(),
     })
 
@@ -64,19 +59,15 @@ def structured_semantics(action_id, capabilities, interface='Human IDE / Termina
 def human_semantics(kind, action_id='a0', capabilities=None):
     capabilities = CAPABILITIES[kind] if capabilities is None else capabilities
     return known({
-        'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
-        'primary_operational_interface': 'Human IDE / Terminal',
-        'what_to_observe': ['Observe repository output, runtime metrics, and recorded evidence.'],
-        'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
-        'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
-        'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
         'structured_operational_semantics': structured_semantics(action_id, capabilities),
+        'supplemental_note': known(
+            'Additional operator context for the ' + kind + ' responsibility.'),
     })
 
 
 class IntegrationTests(unittest.TestCase):
     def setUp(self):
-        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.2.0.json')
+        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.3.0.json')
         self.request = load_json(ROOT / 'tests/fixtures/inspection.request.json')
 
     def assert_no_directive(self, envelope):
@@ -210,20 +201,18 @@ class IntegrationTests(unittest.TestCase):
         marker = '## Human Execution Responsibility'
         prefix, human_section = valid.split(marker, 1)
         changed = prefix + marker + human_section.replace(
-            'Inspect repository and runtime evidence for the run_command responsibility.',
+            'Execute the approved command against the resolved target and determine whether it completed safely.',
             'Relay an unexplained command.', 1)
         validation = validate_directive_conformance(result, changed)
         self.assertEqual(validation['status'], 'FAIL')
-        self.assertIn('HUMAN_EXECUTION_SEMANTICS_MISMATCH', validation['failure_codes'])
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', validation['failure_codes'])
 
     def test_pcbw_r07_identifier_only_fixture_blocks_end_to_end_emission(self):
         semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
         envelope = integration.integrate(request, self.profile)
-        self.assertEqual(envelope['integration_status'], 'BLOCKED_BY_ROUTING')
-        self.assertEqual(envelope['routing_status'], 'FAIL')
-        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
         self.assert_no_directive(envelope)
 
     def test_pcbw_r07_combined_control_meta_fixture_blocks_end_to_end_emission(self):
@@ -231,9 +220,7 @@ class IntegrationTests(unittest.TestCase):
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
         envelope = integration.integrate(request, self.profile)
-        self.assertEqual(envelope['integration_status'], 'BLOCKED_BY_ROUTING')
-        self.assertEqual(envelope['routing_status'], 'FAIL')
-        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
         self.assert_no_directive(envelope)
 
     def test_pcbw_r07_review_report_fixture_blocks_end_to_end_emission(self):
@@ -241,8 +228,7 @@ class IntegrationTests(unittest.TestCase):
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
         envelope = integration.integrate(request, self.profile)
-        self.assertEqual(envelope['routing_status'], 'FAIL')
-        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
         self.assert_no_directive(envelope)
 
     def test_pcbw_r07_synonyms_cannot_replace_structured_bindings(self):
@@ -250,13 +236,8 @@ class IntegrationTests(unittest.TestCase):
                      'analysis', 'evaluation', 'operation', 'activity'):
             with self.subTest(word=word):
                 semantics = human_semantics('run_command')
-                semantics['value'].update(
-                    goal='FS-07 ' + word,
-                    what_to_observe=['Gate PASS ' + word],
-                    human_decision_required='Step 3 ' + word,
-                    expected_interpretation='PASS ' + word,
-                    structured_operational_semantics={'state': 'UNKNOWN'},
-                )
+                semantics['value']['supplemental_note'] = known(word)
+                semantics['value']['structured_operational_semantics'] = {'state': 'UNKNOWN'}
                 request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                         semantics=semantics)
                 envelope = integration.integrate(request, self.profile)
@@ -264,27 +245,82 @@ class IntegrationTests(unittest.TestCase):
                 self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
                 self.assert_no_directive(envelope)
 
-    def test_pcbw_r07_fragment_and_meta_variants_block_end_to_end_emission(self):
-        cases = (
-            ('goal', 'FS_07 state'),
-            ('primary_operational_interface', 'C-0 check'),
-            ('what_to_observe', ['Gate-PASS state']),
-            ('human_decision_required', 'Step_3 result'),
-            ('expected_interpretation', '[PASS] result'),
+    def test_pcbw_r07_banana_self_declared_interface_is_blocked(self):
+        semantics = human_semantics('run_command')
+        structured = semantics['value']['structured_operational_semantics']['value']
+        structured['interface_reference'] = {
+            'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': 'banana'}
+        semantics['value']['supplemental_note'] = known('banana')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_interface_and_binding_mutations_block_integration(self):
+        mutations = (
+            ('unknown-interface', lambda value: value['interface_reference'].update(id='foreign-tool')),
+            ('wrong-selected-surface', lambda value: value['interface_reference'].update(id='codex')),
+            ('wrong-capability', lambda value: value['observation'].update(
+                capability_ids=['runtime_observation'])),
+            ('wrong-action', lambda value: value.update(action_id='other')),
+            ('unknown-fallback', lambda value: value['cli_fallback']['value'].update(id='foreign-cli')),
         )
-        for field, invalid_value in cases:
-            with self.subTest(field=field, invalid_value=invalid_value):
+        for label, mutate in mutations:
+            with self.subTest(label=label):
                 semantics = human_semantics('run_command')
-                semantics['value'][field] = invalid_value
+                mutate(semantics['value']['structured_operational_semantics']['value'])
                 request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                         semantics=semantics)
                 envelope = integration.integrate(request, self.profile)
-                self.assertEqual(envelope['routing_status'], 'FAIL')
-                self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+                self.assertNotEqual(envelope['routing_status'], 'PASS')
                 self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_schema_blocks_self_declared_display_and_invalid_sentinels(self):
+        mutations = (
+            lambda value: value['interface_reference'].update(display_name='banana'),
+            lambda value: value.update(target_reference='OTHER'),
+            lambda value: value['observation'].update(verification_reference='OTHER'),
+            lambda value: value.update(decision_criterion_reference='OTHER'),
+            lambda value: value.update(interpretation_reference='REQUEST_VERIFICATION_CONTRACT'),
+            lambda value: value['cli_fallback']['value'].pop('id'),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                semantics = human_semantics('run_command')
+                mutate(semantics['value']['structured_operational_semantics']['value'])
+                request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                        semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
+                self.assertEqual(envelope['integration_diagnostics'][0]['code'],
+                                 'ROUTING_REQUEST_INVALID')
+                self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_interface_surface_and_profile_ownership_are_enforced(self):
+        profile = copy.deepcopy(self.profile)
+        other_surface = copy.deepcopy(next(
+            surface for surface in profile['surfaces'] if surface['id'] == 'human-terminal'))
+        other_surface.update(id='other-human', label='Other Human Surface')
+        profile['surfaces'].append(other_surface)
+        profile['operational_interfaces'].append({
+            'id': 'other-profile-tool', 'display_name': 'Other Profile Tool',
+            'compatible_surface_ids': ['other-human'],
+            'capability_ids': ['command_execution'],
+        })
+        semantics = human_semantics('run_command')
+        semantics['value']['structured_operational_semantics']['value'][
+            'interface_reference'] = {
+                'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': 'other-profile-tool'}
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, profile)
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assert_no_directive(envelope)
 
     def test_pcbw_r07_malformed_semantics_are_blocked_at_request_boundary(self):
-        for missing in ('expected_interpretation', 'structured_operational_semantics'):
+        for missing in ('supplemental_note', 'structured_operational_semantics'):
             with self.subTest(missing=missing):
                 semantics = human_semantics('run_command')
                 del semantics['value'][missing]
@@ -297,46 +333,67 @@ class IntegrationTests(unittest.TestCase):
                 self.assert_no_directive(envelope)
 
         legacy = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
-        legacy['schema_version'] = '1.1'
-        del legacy['required_actions'][0]['human_facing_semantics']['value'][
-            'structured_operational_semantics']
-        envelope = integration.integrate(legacy, self.profile)
-        self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
-        self.assertEqual(envelope['integration_diagnostics'][0]['code'], 'ROUTING_REQUEST_INVALID')
-        self.assert_no_directive(envelope)
+        for version in ('1.1', '1.2'):
+            with self.subTest(legacy_version=version):
+                legacy = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
+                legacy['schema_version'] = version
+                envelope = integration.integrate(legacy, self.profile)
+                self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
+                self.assertEqual(envelope['integration_diagnostics'][0]['code'],
+                                 'ROUTING_REQUEST_INVALID')
+                self.assert_no_directive(envelope)
 
-    def test_pcbw_r07_concise_interface_emits_with_descriptive_context(self):
-        for interface in ('Grafana', 'Terminal', 'RedisInsight', 'MySQL Workbench', 'Kafka UI'):
-            with self.subTest(interface=interface):
-                semantics = known({
-                    'goal': 'MySQL 복구 후 persistence 저장이 다시 정상 동작하는지 판단한다.',
-                    'primary_operational_interface': interface,
-                    'what_to_observe': ['대상 barcode cohort가 barcodes table에 실제 저장되는지 확인한다.'],
-                    'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
-                    'expected_interpretation': 'DB health와 실제 persistence 결과가 모두 확인되어야 복구 완료다.',
-                    'cli_fallback': nr(),
-                    'structured_operational_semantics': structured_semantics(
-                        'a0', ['command_execution'], interface,
-                        interface.casefold().replace(' ', '-'), 'NAMED_OPERATIONAL_INTERFACE', False),
-                })
-                request = self.humanize(self.make('run_command'),
+    def test_pcbw_r07_trusted_interfaces_emit_resolved_display_names(self):
+        cases = (
+            ('run_command', 'human-terminal', 'SELECTED_EXECUTION_SURFACE', 'Human IDE / Terminal'),
+            ('observe_runtime', 'grafana', 'PROFILE_OPERATIONAL_INTERFACE', 'Grafana'),
+            ('run_command', 'redis-cli', 'PROFILE_OPERATIONAL_INTERFACE', 'redis-cli'),
+        )
+        for kind, interface_id, source, display_name in cases:
+            with self.subTest(interface_id=interface_id):
+                semantics = human_semantics(kind)
+                semantics['value']['structured_operational_semantics']['value'][
+                    'interface_reference'] = {'source': source, 'id': interface_id}
+                request = self.humanize(self.make(kind),
                                         'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
                 envelope = integration.integrate(request, self.profile)
                 self.assertEqual(envelope['integration_status'], 'PASS', envelope)
                 self.assertEqual(envelope['emission_outcome'], 'EMITTED')
                 self.assertIsNotNone(envelope['directive'])
+                self.assertIn(display_name, envelope['directive'])
 
     def test_pcbw_r07_korean_prefix_technical_nouns_emit_with_valid_structure(self):
-        for goal in ('작업자 queue 확인', '실행기 로그 확인', '상태머신 오류 확인', '관측기 metric 확인'):
-            with self.subTest(goal=goal):
+        for note in ('작업자 queue 확인', '실행기 로그 확인', '상태머신 오류 확인', '관측기 metric 확인'):
+            with self.subTest(note=note):
                 semantics = human_semantics('run_command')
-                semantics['value']['goal'] = goal
+                semantics['value']['supplemental_note'] = known(note)
                 request = self.humanize(self.make('run_command'),
                                         'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
                 envelope = integration.integrate(request, self.profile)
                 self.assertEqual(envelope['routing_status'], 'PASS', envelope)
                 self.assertEqual(envelope['emission_outcome'], 'EMITTED')
                 self.assertIsNotNone(envelope['directive'])
+
+    def test_pcbw_r07_cli_fallback_is_resolved_not_copied_from_prose(self):
+        semantics = human_semantics('run_command')
+        semantics['value']['supplemental_note'] = known('banana')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+        self.assertIn('redis-cli', envelope['directive'])
+
+        vulnerable_legacy = copy.deepcopy(request)
+        vulnerable_legacy['schema_version'] = '1.2'
+        vulnerable_legacy['required_actions'][0]['human_facing_semantics'] = known({
+            'goal': 'banana', 'primary_operational_interface': 'banana',
+            'what_to_observe': ['banana'], 'human_decision_required': 'banana',
+            'expected_interpretation': 'banana', 'cli_fallback': known('banana'),
+            'structured_operational_semantics': {'state': 'UNKNOWN'},
+        })
+        blocked = integration.integrate(vulnerable_legacy, self.profile)
+        self.assertEqual(blocked['integration_status'], 'INTEGRATION_BLOCKED')
+        self.assert_no_directive(blocked)
 
     def test_invalid_request_and_profile_are_integration_blocked(self):
         invalid_request = copy.deepcopy(self.request)
@@ -467,7 +524,7 @@ class IntegrationTests(unittest.TestCase):
     def test_integration_cli_pass_and_invalid_serialization(self):
         command = [sys.executable, str(ROOT / 'src/integration_cli.py'),
                    '--request', str(ROOT / 'tests/fixtures/inspection.request.json'),
-                   '--profile', str(ROOT / 'profiles/framework-lab.v0.2.0.json')]
+                   '--profile', str(ROOT / 'profiles/framework-lab.v0.3.0.json')]
         passed = subprocess.run(command, capture_output=True, text=True)
         self.assertEqual(passed.returncode, 0, passed.stdout)
         self.assertEqual(json.loads(passed.stdout)['integration_status'], 'PASS')

@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.2",
+  "id": "framework-lab",
+  "version": "0.3.0",
+  "project": "AI-Native Engineering Framework Lab",
+  "actions": [
+    {
+      "kind": "reason_context",
+      "capabilities": ["context_reasoning"],
+      "effects": ["READ_ONLY"],
+      "actor": "AI",
+      "deterministic": false,
+      "authority_required": false,
+      "preferred_surfaces": ["general-chat"],
+      "human_handoff": {
+        "goal": "Evaluate the resolved engineering context and determine the applicable conclusion.",
+        "observation": "Observe the supplied context, target, constraints, and verification requirement.",
+        "decision": "Determine whether the available context supports the requested engineering conclusion.",
+        "expected_interpretation": "A supported conclusion is bounded by the supplied context and canonical authority."
+      }
+    },
+    {
+      "kind": "inspect_repository",
+      "capabilities": ["repository_inspection"],
+      "effects": ["READ_ONLY"],
+      "actor": "AI",
+      "deterministic": false,
+      "authority_required": false,
+      "preferred_surfaces": ["work-mode"],
+      "human_handoff": {
+        "goal": "Inspect the resolved repository target and determine its actual implementation state.",
+        "observation": "Observe repository files, revision state, configuration, and requested verification evidence.",
+        "decision": "Determine whether the repository state satisfies the specified inspection requirement.",
+        "expected_interpretation": "A conforming result is supported by repository evidence at the resolved target."
+      }
+    },
+    {
+      "kind": "edit_document",
+      "capabilities": ["document_edit"],
+      "effects": ["ARTIFACT_WRITE"],
+      "actor": "AI",
+      "deterministic": false,
+      "authority_required": true,
+      "preferred_surfaces": ["work-mode"],
+      "human_handoff": {
+        "goal": "Edit the resolved document target within the approved content and authority boundary.",
+        "observation": "Observe the source document, required changes, preserved structure, and rendered result.",
+        "decision": "Determine whether the edited document implements the approved change without scope drift.",
+        "expected_interpretation": "A conforming document preserves required structure and contains only approved changes."
+      }
+    },
+    {
+      "kind": "mutate_repository",
+      "capabilities": ["repository_mutation"],
+      "effects": ["REPOSITORY_MUTATION"],
+      "actor": "AI",
+      "deterministic": true,
+      "authority_required": true,
+      "preferred_surfaces": ["codex"],
+      "human_handoff": {
+        "goal": "Apply the approved repository mutation to the resolved target and verify the resulting state.",
+        "observation": "Observe changed files, repository diff, scope boundaries, and verification results.",
+        "decision": "Determine whether the repository mutation is complete, verified, and within authority.",
+        "expected_interpretation": "A successful result contains only approved changes and passes required verification."
+      }
+    },
+    {
+      "kind": "git_branch",
+      "capabilities": ["git_operation"],
+      "effects": ["REPOSITORY_MUTATION"],
+      "actor": "AI",
+      "deterministic": true,
+      "authority_required": true,
+      "preferred_surfaces": ["codex"],
+      "human_handoff": {
+        "goal": "Perform the approved Git operation against the resolved repository and branch target.",
+        "observation": "Observe branch identity, revision history, working tree state, and remote relationship.",
+        "decision": "Determine whether the Git state matches the approved synchronization responsibility.",
+        "expected_interpretation": "A successful Git result preserves unrelated work and matches the approved boundary."
+      }
+    },
+    {
+      "kind": "run_command",
+      "capabilities": ["command_execution"],
+      "effects": ["COMMAND_EXECUTION"],
+      "actor": "AI",
+      "deterministic": true,
+      "authority_required": true,
+      "preferred_surfaces": ["codex"],
+      "human_handoff": {
+        "goal": "Execute the approved command against the resolved target and determine whether it completed safely.",
+        "observation": "Observe command output, exit status, target state, and the specified verification evidence.",
+        "decision": "Determine whether command execution satisfied the verification requirement without boundary violation.",
+        "expected_interpretation": "A successful command result satisfies verification and preserves the approved execution boundary."
+      }
+    },
+    {
+      "kind": "run_tests",
+      "capabilities": ["command_execution"],
+      "effects": ["COMMAND_EXECUTION"],
+      "actor": "AI",
+      "deterministic": true,
+      "authority_required": true,
+      "preferred_surfaces": ["codex"],
+      "human_handoff": {
+        "goal": "Run the approved verification suite against the resolved target and assess the result.",
+        "observation": "Observe test selection, command output, failure counts, errors, and build status.",
+        "decision": "Determine whether the applicable automated verification completed without unacceptable failure.",
+        "expected_interpretation": "A passing result establishes automated conformance only for the verified implementation scope."
+      }
+    },
+    {
+      "kind": "observe_runtime",
+      "capabilities": ["runtime_observation"],
+      "effects": ["RUNTIME_OBSERVATION"],
+      "actor": "HUMAN",
+      "deterministic": false,
+      "authority_required": true,
+      "preferred_surfaces": ["human-terminal"],
+      "human_handoff": {
+        "goal": "Observe the resolved runtime target and determine whether the required operational condition holds.",
+        "observation": "Observe target health, runtime signals, recorded evidence, and the verification requirement.",
+        "decision": "Determine whether the observed runtime state satisfies the approved operational criterion.",
+        "expected_interpretation": "A satisfied criterion establishes only the runtime condition identified by the verification evidence."
+      }
+    },
+    {
+      "kind": "mutate_runtime",
+      "capabilities": ["runtime_mutation"],
+      "effects": ["RUNTIME_MUTATION"],
+      "actor": "HUMAN",
+      "deterministic": true,
+      "authority_required": true,
+      "preferred_surfaces": ["human-terminal"],
+      "human_handoff": {
+        "goal": "Apply the approved runtime change to the resolved target and determine its resulting state.",
+        "observation": "Observe the target before and after mutation, side effects, and required safety evidence.",
+        "decision": "Determine whether the runtime mutation completed within the approved risk and authority boundary.",
+        "expected_interpretation": "A successful mutation reaches the approved target state without prohibited side effects."
+      }
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "general-chat",
+      "label": "ChatGPT 일반 Chat",
+      "actor": "AI",
+      "capabilities": ["context_reasoning"],
+      "available": {"state": "KNOWN", "value": true},
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": ["READ_ONLY"]
+    },
+    {
+      "id": "work-mode",
+      "label": "ChatGPT Work mode",
+      "actor": "AI",
+      "capabilities": ["repository_inspection", "document_edit"],
+      "available": {"state": "KNOWN", "value": true},
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": ["READ_ONLY", "ARTIFACT_WRITE"]
+    },
+    {
+      "id": "codex",
+      "label": "Codex Project / Session: ai-native-engineering-framework",
+      "actor": "AI",
+      "capabilities": ["repository_mutation", "git_operation", "command_execution"],
+      "available": {"state": "KNOWN", "value": true},
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": ["READ_ONLY", "ARTIFACT_WRITE", "REPOSITORY_MUTATION", "COMMAND_EXECUTION"]
+    },
+    {
+      "id": "human-terminal",
+      "label": "Human IDE / Terminal",
+      "actor": "HUMAN",
+      "capabilities": ["command_execution", "runtime_observation", "runtime_mutation"],
+      "available": {"state": "KNOWN", "value": true},
+      "model_recommendation": "Surface-managed / N/A",
+      "reasoning_recommendation": "Surface-managed / N/A",
+      "supported_effects": ["COMMAND_EXECUTION", "RUNTIME_OBSERVATION", "RUNTIME_MUTATION"]
+    }
+  ],
+  "operational_interfaces": [
+    {
+      "id": "grafana",
+      "display_name": "Grafana",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["runtime_observation"]
+    },
+    {
+      "id": "redisinsight",
+      "display_name": "RedisInsight",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["runtime_observation", "runtime_mutation"]
+    },
+    {
+      "id": "mysql-workbench",
+      "display_name": "MySQL Workbench",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["runtime_observation", "runtime_mutation"]
+    },
+    {
+      "id": "kafka-ui",
+      "display_name": "Kafka UI",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["runtime_observation"]
+    },
+    {
+      "id": "intellij-idea",
+      "display_name": "IntelliJ IDEA",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["command_execution"]
+    },
+    {
+      "id": "psql",
+      "display_name": "psql",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["command_execution", "runtime_observation", "runtime_mutation"]
+    },
+    {
+      "id": "redis-cli",
+      "display_name": "redis-cli",
+      "compatible_surface_ids": ["human-terminal"],
+      "capability_ids": ["command_execution", "runtime_observation", "runtime_mutation"]
+    }
+  ]
+}

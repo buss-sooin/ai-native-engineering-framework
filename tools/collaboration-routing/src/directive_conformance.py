@@ -10,7 +10,7 @@ import json
 from engine import verify_result
 from semantic_sufficiency import (
     human_execution_projection_issues,
-    resolved_operational_context,
+    resolve_human_execution_responsibility,
 )
 
 
@@ -60,26 +60,14 @@ def _expected_headers(result):
     }
 
 
-def _human_execution_responsibilities(plan, verification_contract):
+def _human_execution_responsibilities(plan, profile):
     responsibilities = []
     for step in plan:
         if step['actor'] != 'HUMAN':
             continue
         action = step['assigned_actions'][0]
-        semantics = action['human_facing_semantics']['value']
-        responsibilities.append({
-            'Action ID': action['id'],
-            'Human Goal': semantics['goal'],
-            'Human Necessity Basis': action['human_necessity_basis']['value'],
-            'Primary Operational Interface / Tool': semantics['primary_operational_interface'],
-            'What to Observe': semantics['what_to_observe'],
-            'Human Decision Required': semantics['human_decision_required'],
-            'Expected Interpretation': semantics['expected_interpretation'],
-            'CLI / low-level fallback': semantics['cli_fallback'],
-            'Structured Operational Semantics': semantics['structured_operational_semantics'],
-            'Resolved Operational Context': resolved_operational_context(
-                action, step, verification_contract),
-        })
+        responsibilities.append(resolve_human_execution_responsibility(
+            action, step, profile))
     return responsibilities
 
 
@@ -104,7 +92,7 @@ def _expected_sections(result):
             'Human Execution Surface': [step for step in plan if step['actor'] == 'HUMAN'],
         }, 'RESPONSIBILITY_MISMATCH'),
     ]
-    human_responsibilities = _human_execution_responsibilities(plan, result['verification_contract'])
+    human_responsibilities = _human_execution_responsibilities(plan, result['source_profile'])
     if human_responsibilities:
         sections.append(('Human Execution Responsibility', human_responsibilities,
                          'HUMAN_EXECUTION_SEMANTICS_MISMATCH'))
@@ -186,7 +174,7 @@ def validate_directive_conformance(result, text, timeout_seconds=5.0):
             actual_value = _parse_json(lines[position + 2])
             if title == 'Human Execution Responsibility':
                 issues = human_execution_projection_issues(
-                    actual_value, result['execution_plan'], result['verification_contract'])
+                    actual_value, result['execution_plan'], result['source_profile'])
                 if issues:
                     return _failure('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
                                     'Insufficient Human-facing fields: ' + ', '.join(issues))
