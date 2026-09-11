@@ -7,7 +7,7 @@ import time
 from schema_validation import InvalidDocument, canonical, validate
 from semantic_sufficiency import HUMAN_NECESSITY_BASES, human_facing_semantics_issues
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 
 RESOLUTIONS = {
     'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',

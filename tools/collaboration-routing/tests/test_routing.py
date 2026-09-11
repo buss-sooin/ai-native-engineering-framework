@@ -25,12 +25,12 @@ def nr():
 
 def human_semantics(kind):
     return known({
-        'goal': 'Perform ' + kind + ' with direct human responsibility.',
+        'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
         'primary_operational_interface': 'Human IDE / Terminal',
-        'what_to_observe': ['Observe the requested action and its verification evidence.'],
-        'human_decision_required': 'Decide whether the observed result satisfies the approved boundary.',
-        'expected_interpretation': 'A conforming result permits return to the named verification owner.',
-        'cli_fallback': known('Use the approved low-level command only when the primary interface is insufficient.'),
+        'what_to_observe': ['Observe repository output, runtime metrics, and recorded evidence.'],
+        'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
+        'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
+        'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
     })
 
 
@@ -264,12 +264,20 @@ class RoutingTests(unittest.TestCase):
         result = engine.evaluate(self.humanize(self.make('run_command'),
                                                'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
         text = directive.render(result)['directive']
-        changed = text.replace('Perform run_command with direct human responsibility.',
+        changed = text.replace('Inspect repository and runtime evidence for the run_command responsibility.',
                                'Relay an unexplained command.', 1)
         self.assertBlocked(directive.validate_directive(result, changed), 'FAIL', 'MATERIAL_DIRECTIVE_DRIFT')
 
     def test_pcbw_r07_identifier_only_semantics_fail_closed(self):
         semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        validate(request, 'routing-request')
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
+    def test_pcbw_r07_combined_control_meta_semantics_fail_closed(self):
+        semantics = load_json(ROOT / 'tests/fixtures/combined-control-meta-human-semantics.json')
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
                                 semantics=semantics)
         validate(request, 'routing-request')
@@ -315,28 +323,34 @@ class RoutingTests(unittest.TestCase):
     def test_pcbw_r07_forged_pass_cannot_bypass_conformance_or_renderer(self):
         result = engine.evaluate(self.humanize(self.make('run_command'),
                                                'HUMAN_AUTHORITY_REQUIRED'), self.profile)['result']
-        forged = copy.deepcopy(result)
-        semantics = load_json(ROOT / 'tests/fixtures/identifier-only-human-semantics.json')
-        forged['source_request']['required_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
-        forged['execution_plan'][0]['assigned_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
-        forged['semantic_fingerprint'] = engine.fingerprint(forged)
-        forged['routing_result_id'] = 'routing-' + forged['semantic_fingerprint']
+        fixtures = (
+            'identifier-only-human-semantics.json',
+            'combined-control-meta-human-semantics.json',
+        )
+        for fixture in fixtures:
+            with self.subTest(fixture=fixture):
+                forged = copy.deepcopy(result)
+                semantics = load_json(ROOT / 'tests/fixtures' / fixture)
+                forged['source_request']['required_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
+                forged['execution_plan'][0]['assigned_actions'][0]['human_facing_semantics'] = copy.deepcopy(semantics)
+                forged['semantic_fingerprint'] = engine.fingerprint(forged)
+                forged['routing_result_id'] = 'routing-' + forged['semantic_fingerprint']
 
-        with self.assertRaises(RuntimeError):
-            engine.validate_internal_conformance(forged)
-        rendered = directive.render(forged)
-        self.assertNotEqual(rendered['routing_status'], 'PASS')
-        self.assertIsNone(rendered['directive'])
+                with self.assertRaises(RuntimeError):
+                    engine.validate_internal_conformance(forged)
+                rendered = directive.render(forged)
+                self.assertNotEqual(rendered['routing_status'], 'PASS')
+                self.assertIsNone(rendered['directive'])
 
-        raw_matching_directive = directive._render(forged)
-        self.assertEqual(directive_conformance.validate_directive_conformance(
-            forged, raw_matching_directive)['status'], 'FAIL')
-        with patch('directive_conformance.verify_result', return_value={'routing_status': 'PASS'}):
-            independently_checked = directive_conformance.validate_directive_conformance(
-                forged, raw_matching_directive)
-        self.assertEqual(independently_checked['status'], 'FAIL')
-        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
-                      independently_checked['failure_codes'])
+                raw_matching_directive = directive._render(forged)
+                self.assertEqual(directive_conformance.validate_directive_conformance(
+                    forged, raw_matching_directive)['status'], 'FAIL')
+                with patch('directive_conformance.verify_result', return_value={'routing_status': 'PASS'}):
+                    independently_checked = directive_conformance.validate_directive_conformance(
+                        forged, raw_matching_directive)
+                self.assertEqual(independently_checked['status'], 'FAIL')
+                self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
+                              independently_checked['failure_codes'])
 
     def test_pcbw_r07_malformed_semantics_remain_schema_invalid(self):
         for mutation in ('missing', 'empty'):

@@ -1,0 +1,15 @@
+{
+  "state": "KNOWN",
+  "value": {
+    "goal": "FS-07 check state",
+    "primary_operational_interface": "C0 state",
+    "what_to_observe": [
+      "Gate PASS now result"
+    ],
+    "human_decision_required": "Step 3 result value",
+    "expected_interpretation": "PASS value state",
+    "cli_fallback": {
+      "state": "NOT_REQUIRED"
+    }
+  }
+}

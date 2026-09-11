@@ -26,12 +26,12 @@ def nr():
 
 def human_semantics(kind):
     return known({
-        'goal': 'Perform ' + kind + ' with direct human responsibility.',
+        'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
         'primary_operational_interface': 'Human IDE / Terminal',
-        'what_to_observe': ['Observe the requested action and its verification evidence.'],
-        'human_decision_required': 'Decide whether the observed result satisfies the approved boundary.',
-        'expected_interpretation': 'A conforming result permits return to the named verification owner.',
-        'cli_fallback': known('Use the approved low-level command only when the primary interface is insufficient.'),
+        'what_to_observe': ['Observe repository output, runtime metrics, and recorded evidence.'],
+        'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
+        'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
+        'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
     })
 
 
@@ -168,7 +168,8 @@ class IntegrationTests(unittest.TestCase):
         marker = '## Human Execution Responsibility'
         prefix, human_section = valid.split(marker, 1)
         changed = prefix + marker + human_section.replace(
-            'Perform run_command with direct human responsibility.', 'Relay an unexplained command.', 1)
+            'Inspect repository and runtime evidence for the run_command responsibility.',
+            'Relay an unexplained command.', 1)
         validation = validate_directive_conformance(result, changed)
         self.assertEqual(validation['status'], 'FAIL')
         self.assertIn('HUMAN_EXECUTION_SEMANTICS_MISMATCH', validation['failure_codes'])
@@ -183,6 +184,35 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
         self.assert_no_directive(envelope)
 
+    def test_pcbw_r07_combined_control_meta_fixture_blocks_end_to_end_emission(self):
+        semantics = load_json(ROOT / 'tests/fixtures/combined-control-meta-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'BLOCKED_BY_ROUTING')
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_fragment_and_meta_variants_block_end_to_end_emission(self):
+        cases = (
+            ('goal', 'FS_07 state'),
+            ('primary_operational_interface', 'C-0 check'),
+            ('what_to_observe', ['Gate-PASS state']),
+            ('human_decision_required', 'Step_3 result'),
+            ('expected_interpretation', '[PASS] result'),
+        )
+        for field, invalid_value in cases:
+            with self.subTest(field=field, invalid_value=invalid_value):
+                semantics = human_semantics('run_command')
+                semantics['value'][field] = invalid_value
+                request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                        semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['routing_status'], 'FAIL')
+                self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+                self.assert_no_directive(envelope)
+
     def test_pcbw_r07_malformed_semantics_are_blocked_at_request_boundary(self):
         semantics = human_semantics('run_command')
         del semantics['value']['expected_interpretation']
@@ -194,20 +224,22 @@ class IntegrationTests(unittest.TestCase):
         self.assert_no_directive(envelope)
 
     def test_pcbw_r07_concise_interface_emits_with_descriptive_context(self):
-        semantics = known({
-            'goal': 'MySQL 복구 후 persistence가 정상 재개됐는지 판단한다.',
-            'primary_operational_interface': 'Grafana',
-            'what_to_observe': ['대상 barcode cohort가 실제 table에 저장되는지 확인한다.'],
-            'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
-            'expected_interpretation': 'DB health와 실제 persistence 결과가 모두 확인되어야 복구 완료다.',
-            'cli_fallback': nr(),
-        })
-        request = self.humanize(self.make('run_command'),
-                                'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
-        envelope = integration.integrate(request, self.profile)
-        self.assertEqual(envelope['integration_status'], 'PASS', envelope)
-        self.assertEqual(envelope['emission_outcome'], 'EMITTED')
-        self.assertIsNotNone(envelope['directive'])
+        for interface in ('Grafana', 'Terminal', 'RedisInsight', 'MySQL Workbench', 'Kafka UI'):
+            with self.subTest(interface=interface):
+                semantics = known({
+                    'goal': 'MySQL 복구 후 persistence 저장이 다시 정상 동작하는지 판단한다.',
+                    'primary_operational_interface': interface,
+                    'what_to_observe': ['대상 barcode cohort가 barcodes table에 실제 저장되는지 확인한다.'],
+                    'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
+                    'expected_interpretation': 'DB health와 실제 persistence 결과가 모두 확인되어야 복구 완료다.',
+                    'cli_fallback': nr(),
+                })
+                request = self.humanize(self.make('run_command'),
+                                        'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+                self.assertEqual(envelope['emission_outcome'], 'EMITTED')
+                self.assertIsNotNone(envelope['directive'])
 
     def test_invalid_request_and_profile_are_integration_blocked(self):
         invalid_request = copy.deepcopy(self.request)
