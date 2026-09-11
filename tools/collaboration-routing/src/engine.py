@@ -7,7 +7,7 @@ import time
 from schema_validation import InvalidDocument, canonical, validate
 from semantic_sufficiency import HUMAN_NECESSITY_BASES, human_facing_semantics_issues
 
-VERSION = '0.2.2'
+VERSION = '0.3.0'
 
 RESOLUTIONS = {
     'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',
@@ -127,7 +127,15 @@ def validate_internal_conformance(result):
             basis = action.get('human_necessity_basis', {'state': 'UNKNOWN'})
             semantics = action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
             valid = valid and basis['state'] == 'KNOWN' and basis.get('value') in HUMAN_NECESSITY_BASES
-            valid = valid and not human_facing_semantics_issues(semantics)
+            valid = valid and not human_facing_semantics_issues(semantics, {
+                'action_id': action['id'],
+                'action_target': action['target'],
+                'capabilities': step['required_capabilities'],
+                'verification_requirement': action['verification_requirement'],
+                'selected_surface_id': step['surface_id'],
+                'selected_surface_label': step['surface_label'],
+                'verification_contract': result['verification_contract'],
+            })
             if basis.get('value') == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
                 reevaluation = action.get('targeted_re_evaluation_established', {'state': 'UNKNOWN'})
                 valid = valid and reevaluation == {'state': 'KNOWN', 'value': True}
@@ -310,8 +318,6 @@ def _evaluate(request, profile, deadline):
             basis = basis_field.get('value') if basis_field['state'] == 'KNOWN' else None
             if basis is None:
                 unresolved('HUMAN_NECESSITY_BASIS_MISSING', aid)
-            if human_facing_semantics_issues(semantics_field):
-                fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
             if basis == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
                 if reevaluation_field != {'state': 'KNOWN', 'value': True}:
                     unresolved('TARGETED_RE_EVALUATION_NOT_ESTABLISHED', aid)
@@ -355,6 +361,19 @@ def _evaluate(request, profile, deadline):
         if not possible:
             unresolved('REQUIRED_INPUT_UNKNOWN' if unknown_available else 'REQUIRED_CAPABILITY_UNAVAILABLE', aid)
             unresolved('NO_FEASIBLE_SURFACE_AVAILABLE', aid)
+        if actor == 'HUMAN':
+            bound_surface_id = choice or selected.get(aid)
+            bound_surface = surfaces.get(bound_surface_id, {})
+            if human_facing_semantics_issues(semantics_field, {
+                    'action_id': aid,
+                    'action_target': required.get('target'),
+                    'capabilities': definition['capabilities'],
+                    'verification_requirement': required.get('verification_requirement'),
+                    'selected_surface_id': bound_surface_id,
+                    'selected_surface_label': bound_surface.get('label'),
+                    'verification_contract': request.get('verification_contract'),
+            }):
+                fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
         if choice:
             surface = surfaces[choice]
             plan.append({'action_id': aid, 'kind': kind, 'surface_id': choice,
@@ -379,7 +398,7 @@ def _evaluate(request, profile, deadline):
     chosen_ids = sorted({step['surface_id'] for step in plan})
     mode = ('COMPOSITE' if len(chosen_ids) > 1 else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
     result = {
-        'schema_version': '1.1', 'routing_result_id': 'pending', 'request_id': request['request_id'],
+        'schema_version': '1.2', 'routing_result_id': 'pending', 'request_id': request['request_id'],
         'routing_status': status, 'project': copy.deepcopy(request['project']),
         'destination_session_role': copy.deepcopy(request['destination_session_role']), 'route_mode': mode,
         'required_capabilities': sorted(capabilities), 'feasible_surfaces': feasible,

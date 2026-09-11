@@ -23,7 +23,45 @@ def nr():
     return {'state': 'NOT_REQUIRED'}
 
 
-def human_semantics(kind):
+CAPABILITIES = {
+    'reason_context': ['context_reasoning'],
+    'inspect_repository': ['repository_inspection'],
+    'edit_document': ['document_edit'],
+    'mutate_repository': ['repository_mutation'],
+    'git_branch': ['git_operation'],
+    'run_command': ['command_execution'],
+    'run_tests': ['command_execution'],
+    'observe_runtime': ['runtime_observation'],
+    'mutate_runtime': ['runtime_mutation'],
+}
+
+
+def structured_semantics(action_id, capabilities, interface='Human IDE / Terminal',
+                         interface_id='human-terminal', interface_kind='SELECTED_EXECUTION_SURFACE',
+                         cli_fallback=True):
+    return known({
+        'action_id': action_id,
+        'target_reference': 'ACTION_TARGET',
+        'interface': {
+            'kind': interface_kind, 'id': interface_id,
+            'display_name': interface, 'surface_id': 'human-terminal',
+        },
+        'observation': {
+            'target_reference': 'ACTION_TARGET',
+            'capability_ids': list(capabilities),
+            'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        },
+        'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        'interpretation_reference': 'REQUEST_VERIFICATION_CONTRACT',
+        'cli_fallback': known({
+            'kind': 'NAMED_OPERATIONAL_INTERFACE', 'id': 'terminal',
+            'display_name': 'Terminal', 'surface_id': 'human-terminal',
+        }) if cli_fallback else nr(),
+    })
+
+
+def human_semantics(kind, action_id='a0', capabilities=None):
+    capabilities = CAPABILITIES[kind] if capabilities is None else capabilities
     return known({
         'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
         'primary_operational_interface': 'Human IDE / Terminal',
@@ -31,6 +69,7 @@ def human_semantics(kind):
         'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
         'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
         'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
+        'structured_operational_semantics': structured_semantics(action_id, capabilities),
     })
 
 
@@ -56,7 +95,8 @@ class RoutingTests(unittest.TestCase):
                 'human_necessity_basis': known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
                                                 else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
                 'targeted_re_evaluation_established': nr(),
-                'human_facing_semantics': human_semantics(kind) if human else nr(),
+                'human_facing_semantics': human_semantics(
+                    kind, 'a' + str(index), definition['capabilities']) if human else nr(),
                 'verification_requirement': known(['Verify ' + kind + ' against the supplied target.']),
                 'session_role': known('Human Runtime Operator' if human else 'AI Task Reviewer'),
                 'approval_reference': known('fixture-only human approval; not live authorization') if required else nr()})
@@ -73,7 +113,9 @@ class RoutingTests(unittest.TestCase):
         action.update(actor=known('HUMAN'), human_direct=known(True),
                       human_necessity_basis=known(basis) if basis else {'state': 'UNKNOWN'},
                       targeted_re_evaluation_established=copy.deepcopy(reevaluated),
-                      human_facing_semantics=human_semantics(action['kind']['value']) if semantics is None else semantics,
+                      human_facing_semantics=human_semantics(
+                          action['kind']['value'], action['id'], CAPABILITIES[action['kind']['value']]
+                      ) if semantics is None else semantics,
                       session_role=known('Human Execution Operator'))
         request['surface_selection'] = known([{'action_id': action['id'], 'surface_id': 'human-terminal'}])
         return request
@@ -284,6 +326,14 @@ class RoutingTests(unittest.TestCase):
         self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
                            'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
 
+    def test_pcbw_r07_review_report_semantics_require_structured_bindings(self):
+        semantics = load_json(ROOT / 'tests/fixtures/review-report-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        validate(request, 'routing-request')
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+
     def test_pcbw_r07_control_placeholder_and_mixed_semantics_fail(self):
         cases = (
             ('identifier-only', 'goal', 'FS-07'),
@@ -313,6 +363,9 @@ class RoutingTests(unittest.TestCase):
                     'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
                     'expected_interpretation': 'DB health뿐 아니라 실제 persistence 결과까지 확인되어야 복구 완료다.',
                     'cli_fallback': nr(),
+                    'structured_operational_semantics': structured_semantics(
+                        'a0', ['command_execution'], interface,
+                        interface.casefold().replace(' ', '-'), 'NAMED_OPERATIONAL_INTERFACE', False),
                 })
                 request = self.humanize(self.make('run_command'),
                                         'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
@@ -326,6 +379,7 @@ class RoutingTests(unittest.TestCase):
         fixtures = (
             'identifier-only-human-semantics.json',
             'combined-control-meta-human-semantics.json',
+            'review-report-human-semantics.json',
         )
         for fixture in fixtures:
             with self.subTest(fixture=fixture):

@@ -122,7 +122,7 @@ Routing Request → Integration Adapter → Request Validation
 
 중단 조건·근거 요구·브랜치/리비전/환경은 적용되지 않을 때 `NOT_REQUIRED`를 허용한다. 적용 여부를 아직 모르는 `UNKNOWN`은 보수적으로 `UNRESOLVED`다. `surface_selection=NOT_REQUIRED`는 명시적 선택 없이 프로필로 선택하라는 뜻이다. `KNOWN`이면 모든 action ID를 한 번씩 지정해야 한다.
 
-각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수이며, 누락도 Engine의 `UNRESOLVED` 또는 `FAIL` 판정 대상이다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
+각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수이며, `human_facing_semantics.value.structured_operational_semantics`가 action·target·capability·surface·verification 구조를 참조해야 한다. 누락이나 미확정은 Engine의 `UNRESOLVED` 또는 `FAIL` 판정 대상이다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
 
 프로필 요청은 정확한 ID·버전으로 지정한다. 다른 버전이 제공되면 `PROFILE_VERSION_UNAVAILABLE`이며 암묵적으로 최신 버전으로 교체하지 않는다. 정본 충돌 상태는 `CLEAR / CONFLICT / UNKNOWN`으로 구분하며, 충돌 또는 미확정은 `CANONICAL_CONFLICT`로 반환한다.
 
@@ -175,11 +175,11 @@ Routing Request → Integration Adapter → Request Validation
 | 사람 실행 + 사람 대상 운영 의미 미확정 | `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT` |
 | 승인된 다른 사람 필요성 근거 + 완전한 운영 의미 | 기존 역량·effect·권한·경계 검증을 계속 수행하고 모두 충족하면 `PASS` |
 
-사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 구조가 존재하는 것만으로 충분성을 인정하지 않는다. 목표·관측·판단·기대 해석과 `KNOWN` CLI 대체 절차는 내부 식별자, 제어·상태, 플레이스홀더, 숫자 조각과 일반 메타·행위 어휘를 제외한 뒤 운영 주체나 객체를 지시할 수 있는 단어가 둘 이상이어야 하며, 해당 단어의 전체 길이가 6자 이상이어야 한다. 반면 주 운영 인터페이스는 같은 제외 분류를 통과한 이름 하나만 있어도 `Grafana`, `RedisInsight`, `Terminal`처럼 유효하다. 각 관측 항목은 독립적으로 이 기준을 충족해야 한다.
+사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 자유 텍스트는 사람이 책임을 이해하기 위한 표현이지만 PASS의 근거가 아니다. `structured_operational_semantics`는 목표를 action ID와 action target에, 관측을 profile capability와 action verification requirement에, 사람 판단을 action verification requirement에, 기대 해석을 request verification contract에 결합한다. Interface는 선택된 surface에 결합된 `SELECTED_EXECUTION_SURFACE` 또는 일반 `NAMED_OPERATIONAL_INTERFACE`로 식별한다. 적용 가능한 CLI 대체 절차도 구조적으로 `KNOWN / NOT_REQUIRED` 상태와 인터페이스를 명시한다.
 
-분류기는 자연어의 진실성이나 문장 품질을 판단하지 않는다. 공백·underscore·hyphen·구두점을 토큰 경계로 정규화한 뒤 `FS-07`, `FS_07`, `FS 07`, `C0` 같은 내부 식별자 조각과 phase·gate·step 표식을 제거한다. 이어서 `PASS`·`FAIL`·`UNRESOLVED` 같은 상태값, `TODO`·`TBD`·`N/A` 같은 대체 문구와 `check`·`state`·`result`·`value`처럼 단독으로 운영 객체를 설명하지 않는 메타 어휘를 제외한다. 이런 어휘가 실제 Kafka, Redis, repository, metric 같은 프로젝트 고유 명사와 함께 쓰이는 것은 금지하지 않으며, 유효 명사 목록을 제품 allowlist로 고정하지도 않는다. 구조적으로 유효하지만 최소 객체 지시 계약을 충족하지 못하면 `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT`다.
+Engine은 binding의 action ID, target state, capability 집합, 선택 surface, action 검증 요구와 request 검증 계약을 실제 요청·프로필 계산 결과와 대조한다. 따라서 새로운 `review`, `report`, `assessment` 같은 단어를 자유 텍스트에 추가해도 binding이 없거나 불일치하면 의미 충분성을 만들 수 없다. 제한된 어휘 검사는 공백, 명백한 placeholder, 공식 상태, 알려진 내부 식별자와 이를 섞은 Interface를 차단하는 심층 방어(Defense in Depth)만 담당한다. 자연어의 진실성이나 문장 품질은 판단하지 않으며, 제품 allowlist도 사용하지 않는다.
 
-Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션으로 이를 명시한다. Engine과 내부 적합성 검사는 동일한 최소 계약을 각각 적용하며, 독립 Directive Validator도 렌더링된 섹션 자체를 직접 검사한 뒤 Routing Result와 대조한다. 따라서 잘못된 Routing Result와 같은 잘못된 지시문이 일치하더라도 적합해지지 않는다. Engine의 `FAIL`·`UNRESOLVED`, Renderer 검증 실패와 독립 Validator의 `FAIL`은 모두 방출되지 않는다.
+Human Route Leg가 있으면 Renderer가 `Human Execution Responsibility` 섹션에 사람이 읽는 설명과 `Structured Operational Semantics`를 함께 투영한다. 구조는 설명을 대체하지 않으며 Renderer는 누락된 의미를 발명하지 않는다. Engine과 내부 적합성 검사는 같은 구조 계약을 실제 라우팅 문맥과 대조하고, 독립 Directive Validator도 렌더링된 구조와 사람이 읽는 Interface binding을 다시 검증한다. 따라서 잘못된 Routing Result와 같은 잘못된 지시문이 일치하더라도 적합해지지 않는다. Engine의 `FAIL`·`UNRESOLVED`, Renderer 검증 실패와 독립 Validator의 `FAIL`은 모두 방출되지 않는다.
 
 ## 결과 재검증과 의미 지문
 
@@ -308,3 +308,11 @@ Framework Governance와 Failure Reproduction Workflow·Conformance·Reproduction
 `0.2.1`에서 `FS-07 check state`, `Gate PASS now result`, `PASS value state`처럼 내부 식별자와 일반 메타 어휘를 조합하면 기존 토큰 수·길이 문턱을 넘을 수 있었다. `0.2.2`는 구분자와 대소문자를 정규화하고 식별자 조각, 숫자, 상태·제어, 플레이스홀더, 일반 메타·행위 어휘를 명시적으로 분류한다. 설명 필드는 이들을 제외하고 운영 주체·객체 후보가 남아야 하며, 인터페이스 필드는 동일한 제외 규칙을 사용하되 하나의 실제 이름을 허용한다.
 
 전체 87개 테스트 메서드는 helper 분류, 전체 조합형 fixture, 구분자 변형, Engine, 위조된 `PASS`의 내부 적합성, Renderer, 독립 Directive Validator와 통합 비방출을 검증한다. `Grafana`, `Terminal`, `RedisInsight`, `MySQL Workbench`, `Kafka UI`와 한국어·영어 혼합 운영 설명은 계속 허용한다. 이는 범용 자연어 판정이 아니라 알려진 비운영 어휘를 제거하는 최소 계약이므로, 새로운 프로젝트 용어는 allowlist 등록 없이 객체 후보로 남는다. Routing Schema와 프로필 버전은 각각 `1.1`, `0.2.0`으로 유지했다.
+
+## 구조화된 사람 대상 운영 의미 집행 교정
+
+`0.2.2`까지의 어휘 제거 방식은 `FS-07 review report`처럼 blacklist에 없는 동의어로 충분성을 만들 수 있었다. `0.3.0`은 자유 텍스트를 PASS 근거에서 제거하고 기존 Routing Request·Profile의 구조를 참조하는 positive binding을 요구한다. Routing Request·Result Schema는 `1.2`로 변경했으며 Framework Lab Profile은 내용이 변하지 않아 profile version `0.2.0`, profile schema `1.1`을 유지한다.
+
+`structured_operational_semantics`는 action ID, `ACTION_TARGET`, 선택 surface에 귀속된 Interface, profile capability 집합, `ACTION_VERIFICATION_REQUIREMENT`, `REQUEST_VERIFICATION_CONTRACT`와 CLI fallback 상태를 별도 책임으로 표현한다. Engine은 참조를 실제 문맥과 대조하고, 내부 적합성 검사와 독립 Directive Validator도 재계산된 결과와 렌더링된 binding을 검증한다. `1.1` Human request처럼 binding이 없는 이전 형식은 `1.2` 요청 스키마에서 거부되며 지시문을 방출하지 않는다.
+
+전체 93개 테스트 메서드는 세 exploit 계열, 자유 텍스트 동의어 불변성, binding 누락·변조, fingerprint를 다시 계산한 위조 `PASS`, Renderer와 독립 Validator 차단을 검증한다. 한국어 prefix 기반 제거를 없애고 exact control vocabulary만 심층 방어에 사용하므로 `작업자`, `실행기`, `상태머신`, `관측기`는 valid binding이 있으면 허용된다. `Grafana`, `Terminal`, `RedisInsight`, `MySQL Workbench`, `Kafka UI`, `IntelliJ IDEA`, `psql`, `redis-cli`도 제품 allowlist 없이 구조화된 named Interface로 허용한다. 이 교정은 정본 PCBW-R07의 의미를 변경하지 않는다.

@@ -24,7 +24,45 @@ def nr():
     return {'state': 'NOT_REQUIRED'}
 
 
-def human_semantics(kind):
+CAPABILITIES = {
+    'reason_context': ['context_reasoning'],
+    'inspect_repository': ['repository_inspection'],
+    'edit_document': ['document_edit'],
+    'mutate_repository': ['repository_mutation'],
+    'git_branch': ['git_operation'],
+    'run_command': ['command_execution'],
+    'run_tests': ['command_execution'],
+    'observe_runtime': ['runtime_observation'],
+    'mutate_runtime': ['runtime_mutation'],
+}
+
+
+def structured_semantics(action_id, capabilities, interface='Human IDE / Terminal',
+                         interface_id='human-terminal', interface_kind='SELECTED_EXECUTION_SURFACE',
+                         cli_fallback=True):
+    return known({
+        'action_id': action_id,
+        'target_reference': 'ACTION_TARGET',
+        'interface': {
+            'kind': interface_kind, 'id': interface_id,
+            'display_name': interface, 'surface_id': 'human-terminal',
+        },
+        'observation': {
+            'target_reference': 'ACTION_TARGET',
+            'capability_ids': list(capabilities),
+            'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        },
+        'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        'interpretation_reference': 'REQUEST_VERIFICATION_CONTRACT',
+        'cli_fallback': known({
+            'kind': 'NAMED_OPERATIONAL_INTERFACE', 'id': 'terminal',
+            'display_name': 'Terminal', 'surface_id': 'human-terminal',
+        }) if cli_fallback else nr(),
+    })
+
+
+def human_semantics(kind, action_id='a0', capabilities=None):
+    capabilities = CAPABILITIES[kind] if capabilities is None else capabilities
     return known({
         'goal': 'Inspect repository and runtime evidence for the ' + kind + ' responsibility.',
         'primary_operational_interface': 'Human IDE / Terminal',
@@ -32,6 +70,7 @@ def human_semantics(kind):
         'human_decision_required': 'Decide whether repository output and runtime metrics satisfy the approved boundary.',
         'expected_interpretation': 'Matching repository evidence and runtime metrics indicate a successful handoff.',
         'cli_fallback': known('Use Terminal commands to inspect repository logs when the primary tool is unavailable.'),
+        'structured_operational_semantics': structured_semantics(action_id, capabilities),
     })
 
 
@@ -49,7 +88,9 @@ class IntegrationTests(unittest.TestCase):
         action.update(actor=known('HUMAN'), human_direct=known(True),
                       human_necessity_basis=known(basis) if basis else {'state': 'UNKNOWN'},
                       targeted_re_evaluation_established=copy.deepcopy(reevaluated),
-                      human_facing_semantics=human_semantics(action['kind']['value']) if semantics is None else semantics,
+                      human_facing_semantics=human_semantics(
+                          action['kind']['value'], action['id'], CAPABILITIES[action['kind']['value']]
+                      ) if semantics is None else semantics,
                       session_role=known('Human Execution Operator'))
         request['surface_selection'] = known([{'action_id': action['id'], 'surface_id': 'human-terminal'}])
         return request
@@ -73,7 +114,8 @@ class IntegrationTests(unittest.TestCase):
                 'human_necessity_basis': known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
                                                 else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
                 'targeted_re_evaluation_established': nr(),
-                'human_facing_semantics': human_semantics(kind) if human else nr(),
+                'human_facing_semantics': human_semantics(
+                    kind, 'a' + str(index), definition['capabilities']) if human else nr(),
                 'verification_requirement': known(['Verify ' + kind]),
                 'session_role': known('Human Operator' if human else 'AI Reviewer'),
             })
@@ -194,6 +236,34 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
         self.assert_no_directive(envelope)
 
+    def test_pcbw_r07_review_report_fixture_blocks_end_to_end_emission(self):
+        semantics = load_json(ROOT / 'tests/fixtures/review-report-human-semantics.json')
+        request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                semantics=semantics)
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+        self.assert_no_directive(envelope)
+
+    def test_pcbw_r07_synonyms_cannot_replace_structured_bindings(self):
+        for word in ('review', 'report', 'assessment', 'summary', 'inspection',
+                     'analysis', 'evaluation', 'operation', 'activity'):
+            with self.subTest(word=word):
+                semantics = human_semantics('run_command')
+                semantics['value'].update(
+                    goal='FS-07 ' + word,
+                    what_to_observe=['Gate PASS ' + word],
+                    human_decision_required='Step 3 ' + word,
+                    expected_interpretation='PASS ' + word,
+                    structured_operational_semantics={'state': 'UNKNOWN'},
+                )
+                request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED',
+                                        semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['routing_status'], 'FAIL')
+                self.assertIn('HUMAN_FACING_SEMANTICS_INSUFFICIENT', envelope['failure_codes'])
+                self.assert_no_directive(envelope)
+
     def test_pcbw_r07_fragment_and_meta_variants_block_end_to_end_emission(self):
         cases = (
             ('goal', 'FS_07 state'),
@@ -214,11 +284,23 @@ class IntegrationTests(unittest.TestCase):
                 self.assert_no_directive(envelope)
 
     def test_pcbw_r07_malformed_semantics_are_blocked_at_request_boundary(self):
-        semantics = human_semantics('run_command')
-        del semantics['value']['expected_interpretation']
-        request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
-                                semantics=semantics)
-        envelope = integration.integrate(request, self.profile)
+        for missing in ('expected_interpretation', 'structured_operational_semantics'):
+            with self.subTest(missing=missing):
+                semantics = human_semantics('run_command')
+                del semantics['value'][missing]
+                request = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED',
+                                        semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
+                self.assertEqual(envelope['integration_diagnostics'][0]['code'],
+                                 'ROUTING_REQUEST_INVALID')
+                self.assert_no_directive(envelope)
+
+        legacy = self.humanize(self.make('run_command'), 'HUMAN_AUTHORITY_REQUIRED')
+        legacy['schema_version'] = '1.1'
+        del legacy['required_actions'][0]['human_facing_semantics']['value'][
+            'structured_operational_semantics']
+        envelope = integration.integrate(legacy, self.profile)
         self.assertEqual(envelope['integration_status'], 'INTEGRATION_BLOCKED')
         self.assertEqual(envelope['integration_diagnostics'][0]['code'], 'ROUTING_REQUEST_INVALID')
         self.assert_no_directive(envelope)
@@ -233,11 +315,26 @@ class IntegrationTests(unittest.TestCase):
                     'human_decision_required': '누락 없이 저장됐으면 persistence recovery complete로 판단한다.',
                     'expected_interpretation': 'DB health와 실제 persistence 결과가 모두 확인되어야 복구 완료다.',
                     'cli_fallback': nr(),
+                    'structured_operational_semantics': structured_semantics(
+                        'a0', ['command_execution'], interface,
+                        interface.casefold().replace(' ', '-'), 'NAMED_OPERATIONAL_INTERFACE', False),
                 })
                 request = self.humanize(self.make('run_command'),
                                         'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
                 envelope = integration.integrate(request, self.profile)
                 self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+                self.assertEqual(envelope['emission_outcome'], 'EMITTED')
+                self.assertIsNotNone(envelope['directive'])
+
+    def test_pcbw_r07_korean_prefix_technical_nouns_emit_with_valid_structure(self):
+        for goal in ('작업자 queue 확인', '실행기 로그 확인', '상태머신 오류 확인', '관측기 metric 확인'):
+            with self.subTest(goal=goal):
+                semantics = human_semantics('run_command')
+                semantics['value']['goal'] = goal
+                request = self.humanize(self.make('run_command'),
+                                        'DIRECT_HUMAN_OBSERVATION_OBJECTIVE', semantics=semantics)
+                envelope = integration.integrate(request, self.profile)
+                self.assertEqual(envelope['routing_status'], 'PASS', envelope)
                 self.assertEqual(envelope['emission_outcome'], 'EMITTED')
                 self.assertIsNotNone(envelope['directive'])
 

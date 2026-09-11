@@ -1,0 +1,18 @@
+{
+  "state": "KNOWN",
+  "value": {
+    "goal": "FS-07 review report",
+    "primary_operational_interface": "C0 review",
+    "what_to_observe": [
+      "Gate PASS review report"
+    ],
+    "human_decision_required": "Step 3 review report",
+    "expected_interpretation": "PASS review report",
+    "cli_fallback": {
+      "state": "NOT_REQUIRED"
+    },
+    "structured_operational_semantics": {
+      "state": "UNKNOWN"
+    }
+  }
+}

@@ -10,6 +10,9 @@
     "expected_interpretation": "PASS value state",
     "cli_fallback": {
       "state": "NOT_REQUIRED"
+    },
+    "structured_operational_semantics": {
+      "state": "UNKNOWN"
     }
   }
 }

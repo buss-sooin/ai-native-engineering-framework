@@ -1,9 +1,9 @@
-"""Deterministic minimum-content checks for PCBW-R07 Human-facing semantics.
+"""Positive structured conformance for PCBW-R07 Human-facing semantics.
 
-The classifier establishes a bounded lower limit. It removes known workflow,
-status, placeholder and generic meta/action vocabulary, then requires content
-that can name an operational subject or object. It does not judge prose quality
-or attempt unrestricted natural-language understanding.
+Free text remains presentation material. PASS authority comes from bindings to
+the action target, profile capabilities, selected surface, action verification
+requirements and request verification contract. Bounded lexical checks only
+reject obvious placeholders, formal statuses and workflow identifiers.
 """
 import re
 
@@ -17,52 +17,28 @@ HUMAN_NECESSITY_BASES = frozenset({
     'NO_SUITABLE_AUTHORIZED_AI_SURFACE',
 })
 
-_STATUS_TERMS = frozenset({
+_FORMAL_STATUS_TERMS = frozenset({
     'pass', 'passed', 'fail', 'failed', 'unresolved', 'known', 'unknown',
-    'not', 'not-required', 'not_required', 'required', 'ok', 'done', 'complete', 'completed',
+    'not', 'required', 'ok', 'done', 'complete', 'completed',
 })
 _PLACEHOLDER_TERMS = frozenset({
-    'todo', 'tbd', 'n/a', 'na', 'none', 'null', 'placeholder', 'test',
+    'todo', 'tbd', 'n', 'a', 'na', 'none', 'null', 'placeholder', 'test',
     'sample', 'example', 'dummy', 'temp', 'temporary',
+    '미정', '없음', '해당없음', '플레이스홀더', '테스트', '임시',
 })
 _CONTROL_TERMS = frozenset({
-    'gate', 'phase', 'step', 'stage', 'cohort', 'control', 'checkpoint',
-    'section', 'scenario',
-})
-_GENERIC_META_ACTION_TERMS = frozenset({
-    'check', 'checks', 'checked', 'checking', 'state', 'states', 'status',
-    'result', 'results', 'value', 'values', 'decision', 'decisions',
-    'condition', 'conditions', 'item', 'items', 'case', 'cases',
-    'run', 'runs', 'running', 'ran', 'action', 'actions', 'process', 'processes',
-    'current', 'currently', 'now', 'next', 'previous', 'expected', 'actual',
-    'perform', 'performs', 'performed', 'execute', 'executes', 'executed',
-    'execution', 'observe', 'observes', 'observed', 'verify', 'verifies',
-    'verified', 'verification', 'decide', 'decides', 'decided',
-    'human', 'goal', 'responsibility', 'requested', 'approved', 'boundary',
-    'primary', 'operational', 'interface', 'tool', 'fallback', 'command',
-    'use', 'uses', 'used', 'using', 'only', 'when', 'then', 'with', 'without',
-    'direct', 'named', 'return', 'returns', 'conforming', 'insufficient',
-    'information', 'data', 'detail', 'details',
-})
-_KOREAN_NON_OBJECT_STEMS = (
+    'gate', 'phase', 'step', 'stage', 'control', 'checkpoint',
+    'section', 'scenario', 'case', 'state', 'status', 'result', 'value',
     '확인', '판단', '결정', '관측', '관찰', '검증', '실행', '수행',
-    '상태', '결과', '값', '조건', '단계', '항목', '사례', '작업',
-    '현재', '다음', '이전', '예상', '실제', '요청', '승인', '필요',
-    '책임', '목표', '완료', '통과', '진입', '미정', '없음', '해당없음',
-    '플레이스홀더', '테스트', '임시',
-)
-_NON_OBJECT_TERMS = frozenset().union(
-    _STATUS_TERMS,
-    _PLACEHOLDER_TERMS,
-    _CONTROL_TERMS,
-    _GENERIC_META_ACTION_TERMS,
-)
+    '작업', '상태', '결과', '조건', '단계', '항목', '사례',
+})
 _INTERNAL_IDENTIFIER_PREFIXES = frozenset({
     'fs', 'c', 'gate', 'phase', 'step', 'stage', 'control', 'checkpoint',
     'section', 'scenario', 'case',
 })
 _TOKEN = re.compile(r'[0-9A-Za-z가-힣]+')
 _COMPACT_INTERNAL_IDENTIFIER = re.compile(r'^(?:[A-Za-z]{1,12}\d+|\d{2}[A-Za-z])$')
+_MACHINE_ID = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
 
 
 def _tokens(value):
@@ -72,7 +48,6 @@ def _tokens(value):
 
 
 def _internal_identifier_fragment_indexes(tokens):
-    """Recognize compact and delimiter-fragmented workflow/control identifiers."""
     indexes = set()
     for index, token in enumerate(tokens):
         if _COMPACT_INTERNAL_IDENTIFIER.fullmatch(token):
@@ -88,76 +63,210 @@ def _internal_identifier_fragment_indexes(tokens):
     return indexes
 
 
-def _is_object_bearing_token(token, internal_identifier_fragment=False):
-    normalized = token.casefold()
-    return (not internal_identifier_fragment
-            and not re.fullmatch(r'\d+[가-힣]*', token)
-            and normalized not in _NON_OBJECT_TERMS
-            and not any(normalized.startswith(stem) for stem in _KOREAN_NON_OBJECT_STEMS)
-            and len(token) > 1)
-
-
-def object_bearing_tokens(value):
-    """Return candidate operational subject/object tokens after normalization."""
-    tokens = _tokens(value)
+def _obvious_non_semantic_indexes(tokens):
     internal = _internal_identifier_fragment_indexes(tokens)
-    return tuple(token for index, token in enumerate(tokens)
-                 if _is_object_bearing_token(token, index in internal))
+    return internal | {
+        index for index, token in enumerate(tokens)
+        if re.fullmatch(r'\d+[가-힣]*', token)
+        or token.casefold() in _FORMAL_STATUS_TERMS
+        or token.casefold() in _PLACEHOLDER_TERMS
+        or token.casefold() in _CONTROL_TERMS
+    }
 
 
-def is_descriptive_operational_text(value):
-    """Require object-bearing content, not only IDs/control/meta/placeholders."""
-    objects = object_bearing_tokens(value)
-    return len(objects) >= 2 and sum(map(len, objects)) >= 6
+def is_applicable_human_text(value):
+    """Reject only obvious non-content; this is not positive PASS evidence."""
+    tokens = _tokens(value)
+    if not tokens:
+        return False
+    excluded = _obvious_non_semantic_indexes(tokens)
+    return any(index not in excluded and len(token) > 1
+               for index, token in enumerate(tokens))
 
 
 def is_operational_interface(value):
-    """Allow concise tool names while rejecting IDs and control-only labels."""
-    return bool(object_bearing_tokens(value))
+    """Validate a named interface without using a product allowlist."""
+    tokens = _tokens(value)
+    if not tokens:
+        return False
+    excluded = _obvious_non_semantic_indexes(tokens)
+    if excluded:
+        return False
+    return any(len(token) > 1 for token in tokens)
 
 
-def human_facing_semantics_issues(semantics):
-    """Return the Human-facing fields that fail the deterministic minimum contract."""
+def _interface_issues(interface, prose, context, prefix):
+    if not isinstance(interface, dict):
+        return (prefix,)
+    required = {'kind', 'id', 'display_name', 'surface_id'}
+    if set(interface) != required:
+        return (prefix,)
+    kind = interface.get('kind')
+    identifier = interface.get('id')
+    display_name = interface.get('display_name')
+    issues = []
+    if kind not in ('NAMED_OPERATIONAL_INTERFACE', 'SELECTED_EXECUTION_SURFACE'):
+        issues.append(prefix + '.kind')
+    if (not isinstance(identifier, str) or not _MACHINE_ID.fullmatch(identifier)
+            or not is_operational_interface(identifier)):
+        issues.append(prefix + '.id')
+    if not is_operational_interface(display_name):
+        issues.append(prefix + '.display_name')
+    if display_name != prose:
+        issues.append(prefix + '.display_name_binding')
+    if interface.get('surface_id') != context.get('selected_surface_id'):
+        issues.append(prefix + '.surface_id')
+    if kind == 'SELECTED_EXECUTION_SURFACE':
+        if identifier != context.get('selected_surface_id'):
+            issues.append(prefix + '.selected_surface_id')
+        if display_name != context.get('selected_surface_label'):
+            issues.append(prefix + '.selected_surface_label')
+    return tuple(issues)
+
+
+def _structured_issues(structured, prose, context):
+    if not isinstance(structured, dict) or structured.get('state') != 'KNOWN':
+        return ('structured_operational_semantics',)
+    value = structured.get('value')
+    required = {
+        'action_id', 'target_reference', 'interface', 'observation',
+        'decision_criterion_reference', 'interpretation_reference', 'cli_fallback',
+    }
+    if not isinstance(value, dict) or set(value) != required:
+        return ('structured_operational_semantics',)
+
+    issues = []
+    if value.get('action_id') != context.get('action_id'):
+        issues.append('structured_operational_semantics.action_id')
+    if (value.get('target_reference') != 'ACTION_TARGET'
+            or not isinstance(context.get('action_target'), dict)
+            or context['action_target'].get('state') != 'KNOWN'):
+        issues.append('structured_operational_semantics.target_reference')
+    issues.extend(_interface_issues(
+        value.get('interface'), prose.get('primary_operational_interface'), context,
+        'structured_operational_semantics.interface'))
+
+    observation = value.get('observation')
+    if not isinstance(observation, dict) or set(observation) != {
+            'target_reference', 'capability_ids', 'verification_reference'}:
+        issues.append('structured_operational_semantics.observation')
+    else:
+        if observation.get('target_reference') != 'ACTION_TARGET':
+            issues.append('structured_operational_semantics.observation.target_reference')
+        capabilities = observation.get('capability_ids')
+        if (not isinstance(capabilities, list)
+                or sorted(capabilities) != sorted(context.get('capabilities', []))):
+            issues.append('structured_operational_semantics.observation.capability_ids')
+        if (observation.get('verification_reference') != 'ACTION_VERIFICATION_REQUIREMENT'
+                or not isinstance(context.get('verification_requirement'), dict)
+                or context['verification_requirement'].get('state') != 'KNOWN'
+                or not context['verification_requirement'].get('value')):
+            issues.append('structured_operational_semantics.observation.verification_reference')
+
+    if value.get('decision_criterion_reference') != 'ACTION_VERIFICATION_REQUIREMENT':
+        issues.append('structured_operational_semantics.decision_criterion_reference')
+    verification_contract = context.get('verification_contract')
+    if (value.get('interpretation_reference') != 'REQUEST_VERIFICATION_CONTRACT'
+            or not isinstance(verification_contract, dict)
+            or verification_contract.get('state') != 'KNOWN'
+            or not verification_contract.get('value')):
+        issues.append('structured_operational_semantics.interpretation_reference')
+
+    fallback = value.get('cli_fallback')
+    prose_fallback = prose.get('cli_fallback')
+    if not isinstance(fallback, dict) or fallback.get('state') not in ('KNOWN', 'NOT_REQUIRED'):
+        issues.append('structured_operational_semantics.cli_fallback')
+    elif fallback.get('state') == 'NOT_REQUIRED':
+        if fallback != {'state': 'NOT_REQUIRED'} or prose_fallback != {'state': 'NOT_REQUIRED'}:
+            issues.append('structured_operational_semantics.cli_fallback')
+    else:
+        if (set(fallback) != {'state', 'value'} or not isinstance(prose_fallback, dict)
+                or prose_fallback.get('state') != 'KNOWN'
+                or not is_applicable_human_text(prose_fallback.get('value'))
+                or not isinstance(fallback.get('value'), dict)):
+            issues.append('structured_operational_semantics.cli_fallback')
+        else:
+            issues.extend(_interface_issues(
+                fallback.get('value'), fallback['value'].get('display_name'), context,
+                'structured_operational_semantics.cli_fallback.value'))
+    return tuple(issues)
+
+
+def human_facing_semantics_issues(semantics, context=None):
+    """Return fields that fail presentation or positive structured conformance."""
     if not isinstance(semantics, dict) or semantics.get('state') != 'KNOWN':
         return ('human_facing_semantics',)
     value = semantics.get('value')
     if not isinstance(value, dict):
         return ('human_facing_semantics',)
+    context = context or {}
 
     issues = []
-    if not is_descriptive_operational_text(value.get('goal')):
-        issues.append('goal')
+    for field in ('goal', 'human_decision_required', 'expected_interpretation'):
+        if not is_applicable_human_text(value.get(field)):
+            issues.append(field)
     if not is_operational_interface(value.get('primary_operational_interface')):
         issues.append('primary_operational_interface')
-
     observations = value.get('what_to_observe')
     if (not isinstance(observations, list) or not observations
-            or any(not is_descriptive_operational_text(item) for item in observations)):
+            or any(not is_applicable_human_text(item) for item in observations)):
         issues.append('what_to_observe')
-    if not is_descriptive_operational_text(value.get('human_decision_required')):
-        issues.append('human_decision_required')
-    if not is_descriptive_operational_text(value.get('expected_interpretation')):
-        issues.append('expected_interpretation')
-
     fallback = value.get('cli_fallback')
-    if not isinstance(fallback, dict) or fallback.get('state') not in ('KNOWN', 'NOT_REQUIRED'):
+    if (not isinstance(fallback, dict) or fallback.get('state') not in ('KNOWN', 'NOT_REQUIRED')
+            or (fallback.get('state') == 'KNOWN'
+                and not is_applicable_human_text(fallback.get('value')))):
         issues.append('cli_fallback')
-    elif (fallback.get('state') == 'KNOWN'
-          and not is_descriptive_operational_text(fallback.get('value'))):
-        issues.append('cli_fallback')
+    issues.extend(_structured_issues(
+        value.get('structured_operational_semantics'), value, context))
     return tuple(issues)
 
 
-def human_execution_projection_issues(responsibilities):
-    """Validate the rendered Human Execution Responsibility projection directly."""
+def resolved_operational_context(action, step, verification_contract):
+    """Project a structured binding onto the actual validated routing context.
+
+    This helper deliberately tolerates malformed/forged inputs so that every
+    downstream validation boundary can fail closed instead of raising while it
+    inspects an invalid PASS result.
+    """
+    semantics = action.get('human_facing_semantics', {}).get('value', {})
+    structured = semantics.get('structured_operational_semantics')
+    structured_value = (structured.get('value', {})
+                        if isinstance(structured, dict) else {})
+    if not isinstance(structured_value, dict):
+        structured_value = {}
+    return {
+        'Action': {
+            'id': action.get('id'),
+            'kind': action.get('kind'),
+            'target': action.get('target'),
+        },
+        'Interface': structured_value.get('interface'),
+        'Observation': {
+            'target': action.get('target'),
+            'capabilities': step.get('required_capabilities'),
+            'verification_requirement': action.get('verification_requirement'),
+        },
+        'Human Decision Criterion': action.get('verification_requirement'),
+        'Expected Interpretation Contract': verification_contract,
+        'CLI / low-level fallback': structured_value.get('cli_fallback'),
+    }
+
+
+def human_execution_projection_issues(responsibilities, execution_plan, verification_contract):
+    """Validate rendered Human responsibilities against Routing Result structure."""
     if not isinstance(responsibilities, list) or not responsibilities:
         return ('Human Execution Responsibility',)
+    human_steps = [step for step in execution_plan if step.get('actor') == 'HUMAN']
+    if len(responsibilities) != len(human_steps):
+        return ('Human Execution Responsibility',)
+
     issues = []
-    for index, item in enumerate(responsibilities):
+    for index, (item, step) in enumerate(zip(responsibilities, human_steps)):
         prefix = 'Human Execution Responsibility[' + str(index) + '].'
         if not isinstance(item, dict):
             issues.append(prefix.rstrip('.'))
             continue
+        action = step['assigned_actions'][0]
         if item.get('Human Necessity Basis') not in HUMAN_NECESSITY_BASES:
             issues.append(prefix + 'Human Necessity Basis')
         semantics = {
@@ -169,7 +278,21 @@ def human_execution_projection_issues(responsibilities):
                 'human_decision_required': item.get('Human Decision Required'),
                 'expected_interpretation': item.get('Expected Interpretation'),
                 'cli_fallback': item.get('CLI / low-level fallback'),
+                'structured_operational_semantics': item.get('Structured Operational Semantics'),
             },
         }
-        issues.extend(prefix + field for field in human_facing_semantics_issues(semantics))
+        context = {
+            'action_id': action.get('id'),
+            'action_target': action.get('target'),
+            'capabilities': step.get('required_capabilities'),
+            'verification_requirement': action.get('verification_requirement'),
+            'selected_surface_id': step.get('surface_id'),
+            'selected_surface_label': step.get('surface_label'),
+            'verification_contract': verification_contract,
+        }
+        expected_resolved = resolved_operational_context(action, step, verification_contract)
+        if item.get('Resolved Operational Context') != expected_resolved:
+            issues.append(prefix + 'Resolved Operational Context')
+        issues.extend(prefix + field for field in human_facing_semantics_issues(
+            semantics, context))
     return tuple(issues)

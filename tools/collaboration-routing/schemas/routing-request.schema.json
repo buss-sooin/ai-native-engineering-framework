@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:routing-request:1.1",
+  "$id": "urn:collaboration-routing:routing-request:1.2",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.1"
+        "1.2"
       ]
     },
     "request_id": {
@@ -1023,6 +1023,210 @@
                             "additionalProperties": false
                           }
                         ]
+                      },
+                      "structured_operational_semantics": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "KNOWN"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "action_id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_reference": {
+                                    "enum": [
+                                      "ACTION_TARGET"
+                                    ]
+                                  },
+                                  "interface": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "NAMED_OPERATIONAL_INTERFACE",
+                                          "SELECTED_EXECUTION_SURFACE"
+                                        ]
+                                      },
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "display_name": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "surface_id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "id",
+                                      "display_name",
+                                      "surface_id"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "observation": {
+                                    "type": "object",
+                                    "properties": {
+                                      "target_reference": {
+                                        "enum": [
+                                          "ACTION_TARGET"
+                                        ]
+                                      },
+                                      "capability_ids": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "minItems": 1,
+                                        "uniqueItems": true
+                                      },
+                                      "verification_reference": {
+                                        "enum": [
+                                          "ACTION_VERIFICATION_REQUIREMENT"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "target_reference",
+                                      "capability_ids",
+                                      "verification_reference"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "decision_criterion_reference": {
+                                    "enum": [
+                                      "ACTION_VERIFICATION_REQUIREMENT"
+                                    ]
+                                  },
+                                  "interpretation_reference": {
+                                    "enum": [
+                                      "REQUEST_VERIFICATION_CONTRACT"
+                                    ]
+                                  },
+                                  "cli_fallback": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "state": {
+                                            "enum": [
+                                              "KNOWN"
+                                            ]
+                                          },
+                                          "value": {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "enum": [
+                                                  "NAMED_OPERATIONAL_INTERFACE",
+                                                  "SELECTED_EXECUTION_SURFACE"
+                                                ]
+                                              },
+                                              "id": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              "display_name": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              "surface_id": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "id",
+                                              "display_name",
+                                              "surface_id"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "required": [
+                                          "state",
+                                          "value"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "state": {
+                                            "enum": [
+                                              "NOT_REQUIRED"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "state"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "action_id",
+                                  "target_reference",
+                                  "interface",
+                                  "observation",
+                                  "decision_criterion_reference",
+                                  "interpretation_reference",
+                                  "cli_fallback"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "UNKNOWN"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "NOT_REQUIRED"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -1031,7 +1235,8 @@
                       "what_to_observe",
                       "human_decision_required",
                       "expected_interpretation",
-                      "cli_fallback"
+                      "cli_fallback",
+                      "structured_operational_semantics"
                     ],
                     "additionalProperties": false
                   }

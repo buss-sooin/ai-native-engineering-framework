@@ -8,7 +8,10 @@ import html
 import json
 
 from engine import verify_result
-from semantic_sufficiency import human_execution_projection_issues
+from semantic_sufficiency import (
+    human_execution_projection_issues,
+    resolved_operational_context,
+)
 
 
 HEADER_FIELDS = (
@@ -57,7 +60,7 @@ def _expected_headers(result):
     }
 
 
-def _human_execution_responsibilities(plan):
+def _human_execution_responsibilities(plan, verification_contract):
     responsibilities = []
     for step in plan:
         if step['actor'] != 'HUMAN':
@@ -73,6 +76,9 @@ def _human_execution_responsibilities(plan):
             'Human Decision Required': semantics['human_decision_required'],
             'Expected Interpretation': semantics['expected_interpretation'],
             'CLI / low-level fallback': semantics['cli_fallback'],
+            'Structured Operational Semantics': semantics['structured_operational_semantics'],
+            'Resolved Operational Context': resolved_operational_context(
+                action, step, verification_contract),
         })
     return responsibilities
 
@@ -98,7 +104,7 @@ def _expected_sections(result):
             'Human Execution Surface': [step for step in plan if step['actor'] == 'HUMAN'],
         }, 'RESPONSIBILITY_MISMATCH'),
     ]
-    human_responsibilities = _human_execution_responsibilities(plan)
+    human_responsibilities = _human_execution_responsibilities(plan, result['verification_contract'])
     if human_responsibilities:
         sections.append(('Human Execution Responsibility', human_responsibilities,
                          'HUMAN_EXECUTION_SEMANTICS_MISMATCH'))
@@ -179,7 +185,8 @@ def validate_directive_conformance(result, text, timeout_seconds=5.0):
                 return _failure('DIRECTIVE_STRUCTURE_INVALID', 'Invalid JSON block for section: ' + title)
             actual_value = _parse_json(lines[position + 2])
             if title == 'Human Execution Responsibility':
-                issues = human_execution_projection_issues(actual_value)
+                issues = human_execution_projection_issues(
+                    actual_value, result['execution_plan'], result['verification_contract'])
                 if issues:
                     return _failure('HUMAN_FACING_SEMANTICS_INSUFFICIENT',
                                     'Insufficient Human-facing fields: ' + ', '.join(issues))

@@ -2,6 +2,7 @@
 import html
 from engine import diagnostic, resolution_actions, verify_result
 from schema_validation import canonical
+from semantic_sufficiency import resolved_operational_context
 
 
 def literal(value):
@@ -16,7 +17,7 @@ def heading(value):
     return text.replace('\r', '&#13;').replace('\n', '&#10;')
 
 
-def human_execution_responsibilities(plan):
+def human_execution_responsibilities(plan, verification_contract):
     responsibilities = []
     for step in plan:
         if step['actor'] != 'HUMAN':
@@ -32,6 +33,9 @@ def human_execution_responsibilities(plan):
             'Human Decision Required': semantics['human_decision_required'],
             'Expected Interpretation': semantics['expected_interpretation'],
             'CLI / low-level fallback': semantics['cli_fallback'],
+            'Structured Operational Semantics': semantics['structured_operational_semantics'],
+            'Resolved Operational Context': resolved_operational_context(
+                action, step, verification_contract),
         })
     return responsibilities
 
@@ -58,7 +62,7 @@ def _render(result):
                                      'AI Session Surface': [s for s in plan if s['actor'] == 'AI'],
                                      'Human Execution Surface': [s for s in plan if s['actor'] == 'HUMAN']}),
     ]
-    human_responsibilities = human_execution_responsibilities(plan)
+    human_responsibilities = human_execution_responsibilities(plan, result['verification_contract'])
     if human_responsibilities:
         sections.append(('Human Execution Responsibility', human_responsibilities))
     sections.extend([
