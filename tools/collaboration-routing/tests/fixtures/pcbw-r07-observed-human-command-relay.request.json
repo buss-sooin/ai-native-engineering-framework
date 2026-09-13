@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.5",
+  "request_id": "pcbw-r07-observed-human-command-relay",
+  "project": {
+    "state": "KNOWN",
+    "value": "AI-Native Engineering Framework Lab"
+  },
+  "title": {
+    "state": "KNOWN",
+    "value": "Observed Project Control Plane Human command relay"
+  },
+  "objective": {
+    "state": "KNOWN",
+    "value": "Execute prepared Bash, verify hashes, run static preflight, collect Docker inspect/logs/stats, and write Evidence and stability-plan files."
+  },
+  "destination_session_role": {
+    "state": "KNOWN",
+    "value": "Human Command Relay"
+  },
+  "target": {
+    "state": "KNOWN",
+    "value": "authorized Project repository and local Docker observation boundary"
+  },
+  "current_state": {
+    "state": "KNOWN",
+    "value": "Prepared deterministic command sequence is ready for execution"
+  },
+  "current_gate": {
+    "state": "KNOWN",
+    "value": "No material Human approval, risk-control decision, learning objective, or direct-observation objective exists"
+  },
+  "canonical_authority": {
+    "state": "KNOWN",
+    "value": [
+      "workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md#PCBW-R07"
+    ]
+  },
+  "canonical_conflict": "CLEAR",
+  "profile": {
+    "id": "framework-lab",
+    "version": "0.4.0"
+  },
+  "required_actions": [
+    {
+      "id": "execute-prepared-observation-script",
+      "kind": {
+        "state": "KNOWN",
+        "value": "run_command"
+      },
+      "actor": {
+        "state": "KNOWN",
+        "value": "HUMAN"
+      },
+      "authority": "AUTHORIZED",
+      "approval_reference": {
+        "state": "KNOWN",
+        "value": "Project execution boundary already authorizes Codex CLI command execution and artifact writes"
+      },
+      "target": {
+        "state": "KNOWN",
+        "value": "authorized Project repository and local Docker observation boundary"
+      },
+      "effects": {
+        "state": "KNOWN",
+        "value": [
+          "COMMAND_EXECUTION",
+          "ARTIFACT_WRITE"
+        ]
+      },
+      "source_references": {
+        "state": "KNOWN",
+        "value": [
+          "observed-directive:prepared-bash",
+          "observed-directive:hash-and-static-preflight",
+          "observed-directive:docker-inspect-logs-stats",
+          "observed-directive:evidence-and-stability-plan-write"
+        ]
+      },
+      "human_direct": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "human_necessity_basis": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_return_responsibility": {
+        "state": "KNOWN",
+        "value": {
+          "kind": "ACK_ONLY",
+          "description": "Return only a completion acknowledgement after the prepared Bash finishes.",
+          "source_references": [
+            "observed-directive:return-only-completion-acknowledgement"
+          ]
+        }
+      },
+      "targeted_re_evaluation_established": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_facing_semantics": {
+        "state": "KNOWN",
+        "value": {
+          "structured_operational_semantics": {
+            "state": "KNOWN",
+            "value": {
+              "action_id": "execute-prepared-observation-script",
+              "target_reference": "ACTION_TARGET",
+              "interface_reference": {
+                "source": "SELECTED_EXECUTION_SURFACE",
+                "id": "human-terminal"
+              },
+              "observation": {
+                "target_reference": "ACTION_TARGET",
+                "capability_ids": [
+                  "command_execution"
+                ],
+                "verification_reference": "ACTION_VERIFICATION_REQUIREMENT"
+              },
+              "decision_criterion_reference": "ACTION_HUMAN_RETURN_RESPONSIBILITY",
+              "interpretation_reference": "PROFILE_ACTION_HUMAN_HANDOFF",
+              "cli_fallback": {
+                "state": "NOT_REQUIRED"
+              }
+            }
+          },
+          "supplemental_note": {
+            "state": "KNOWN",
+            "value": "Run the prepared Bash verbatim and do not interpret the collected Evidence."
+          }
+        }
+      },
+      "verification_requirement": {
+        "state": "KNOWN",
+        "value": [
+          "Prepared Bash exits successfully and produces the requested raw Evidence files."
+        ]
+      },
+      "session_role": {
+        "state": "KNOWN",
+        "value": "Human IDE / Terminal command relay"
+      }
+    }
+  ],
+  "surface_selection": {
+    "state": "KNOWN",
+    "value": [
+      {
+        "action_id": "execute-prepared-observation-script",
+        "surface_id": "human-terminal"
+      }
+    ]
+  },
+  "approved_execution_boundary": {
+    "state": "KNOWN",
+    "value": {
+      "target": "authorized Project repository and local Docker observation boundary",
+      "allowed_action_ids": [
+        "execute-prepared-observation-script"
+      ],
+      "allowed_effects": [
+        "COMMAND_EXECUTION",
+        "ARTIFACT_WRITE"
+      ]
+    }
+  },
+  "prohibited_actions": {
+    "state": "KNOWN",
+    "value": []
+  },
+  "responsibility": {
+    "decision_owner": {
+      "state": "KNOWN",
+      "value": "AI Project Control Plane"
+    },
+    "verification_owner": {
+      "state": "KNOWN",
+      "value": "AI Project Control Plane"
+    },
+    "continuation_authority": "AUTHORIZED"
+  },
+  "verification_contract": {
+    "state": "KNOWN",
+    "value": [
+      "AI inspects the returned Evidence and decides the next step."
+    ]
+  },
+  "return_contract": {
+    "state": "KNOWN",
+    "value": {
+      "destination": "AI Project Control Plane for Evidence interpretation and continuation decision",
+      "human_action_returns": [
+        {
+          "action_id": "execute-prepared-observation-script",
+          "responsibility_kind": "ACK_ONLY"
+        }
+      ]
+    }
+  },
+  "stop_conditions": {
+    "state": "KNOWN",
+    "value": [
+      "Stop only if the prepared script cannot execute within the supplied boundary."
+    ]
+  },
+  "evidence_requirement": {
+    "state": "KNOWN",
+    "value": [
+      "Preserve command output and generated Evidence files for AI review."
+    ]
+  },
+  "branch_revision_environment": {
+    "state": "KNOWN",
+    "value": "Codex CLI is available, suitable, and authorized for command execution."
+  }
+}

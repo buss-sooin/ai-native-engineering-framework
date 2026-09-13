@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "id": "framework-lab-reusable-directive-emission",
+  "version": "0.1.0",
+  "project": "AI-Native Engineering Framework Lab",
+  "status": "CANDIDATE_FOR_EXTERNAL_PROJECT_SYNCHRONIZATION",
+  "canonical_authority": [
+    "workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md#PCBW-R06",
+    "workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md#PCBW-R07"
+  ],
+  "enforcement_boundary": {
+    "repository_validator": "EXECUTABLE",
+    "project_instruction_obligation": "DEFINED",
+    "chatgpt_native_interceptor": false,
+    "external_project_synchronization": "REQUIRED"
+  },
+  "emission_contract": {
+    "applies_to": "EVERY_REUSABLE_ROUTING_OR_HANDOFF_DIRECTIVE",
+    "before_emission": [
+      "DETERMINE_REQUIRED_ACTION",
+      "DETERMINE_REQUIRED_CAPABILITY",
+      "EXPLICITLY_EVALUATE_HUMAN_NECESSITY",
+      "REJECT_DETERMINISTIC_HUMAN_COMMAND_RELAY",
+      "APPLY_PCBW_R06_TARGETED_RE_EVALUATION_WHEN_CURRENT_SURFACE_IS_INSUFFICIENT",
+      "RETURN_SUITABLE_AUTHORIZED_AI_CANDIDATES_WITHOUT_SELECTING_OR_AUTHORIZING_THEM",
+      "VALIDATE_PCBW_R07_CONFORMANCE",
+      "EMIT_ONLY_AFTER_ROUTING_RESULT_AND_DIRECTIVE_VALIDATION_PASS"
+    ],
+    "human_terminal_default_missing_capability_fallback": "FORBIDDEN",
+    "forbidden_flow": "AI_COMMAND_TO_HUMAN_EXECUTION_TO_ACK_OR_RAW_OUTPUT_TO_NEXT_AI_COMMAND_WHEN_SUITABLE_AUTHORIZED_AI_SURFACE_EXISTS",
+    "missing_capability_behavior": "PCBW_R06_TARGETED_RE_EVALUATION",
+    "emission_condition": "VALIDATED_ROUTING_RESULT_PASS_AND_DIRECTIVE_VALIDATION_PASS",
+    "failure_outcome": {
+      "directive": null,
+      "emission_outcome": "BLOCKED"
+    }
+  },
+  "project_instruction_amendment": [
+    "Before emitting any reusable routing or handoff directive, determine every Required Action and Required Capability and explicitly evaluate Human Necessity.",
+    "Reject deterministic Human command-relay responsibility when the Human would only run a prepared command or script, collect Evidence or logs, poll state, verify a hash, copy raw output, or return ACK/PASS/FAIL output without an intentionally Human-owned engineering decision, approval, risk control, direct-observation objective, learning objective, or other valid Human responsibility.",
+    "When the current Surface is insufficient, apply PCBW-R06 targeted re-evaluation and return suitable authorized AI Surface candidates. Candidate suitability does not select the Surface or grant authority: Recommended is not Selected and Selected is not Authorized.",
+    "Human IDE / Terminal must not be used as a default missing-capability fallback when a suitable authorized AI execution Surface exists.",
+    "Prohibit the flow AI command to Human execution to raw output or acknowledgement to the next AI command when a suitable authorized AI execution Surface exists.",
+    "A trusted Profile responsibility ID is only catalog membership. Require the current action actor, selected Surface, session role, responsibility kind, and Profile-declared decision or verification owner bindings to agree before treating Human responsibility as established.",
+    "Emit a reusable directive only after PCBW-R07 conformance, a validated Routing Result PASS, and Directive Validation PASS. Otherwise return directive=null and emission_outcome=BLOCKED."
+  ]
+}

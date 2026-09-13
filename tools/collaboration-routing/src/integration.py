@@ -4,11 +4,11 @@ import hashlib
 
 from directive import render
 from directive_conformance import validate_directive_conformance
-from engine import evaluate, validate_profile
+from engine import evaluate, validate_profile, verify_result
 from schema_validation import canonical, validate
 
 
-VERSION = '0.4.0'
+VERSION = '0.8.0'
 _DEFAULT = object()
 
 
@@ -128,6 +128,21 @@ def integrate(request, profile, timeout_seconds=5.0, engine_callable=_DEFAULT,
     if envelope['routing_status'] != 'PASS':
         return _routing_blocked(request_snapshot, envelope)
 
+    if (result.get('source_request') != request_snapshot
+            or result.get('source_profile') != profile_snapshot):
+        return integration_blocked(
+            'ROUTING_RESULT_INPUT_MISMATCH', 'ENGINE_RESULT_VALIDATION',
+            'Routing Result is not bound to the exact Request and Profile supplied to this integration call.',
+            request_snapshot, result)
+
+    verified = verify_result(result, timeout_seconds)
+    if (verified.get('routing_status') != 'PASS'
+            or verified.get('result') != result):
+        return integration_blocked(
+            'ROUTING_RESULT_NOT_VALIDATED', 'ENGINE_RESULT_VALIDATION',
+            'Routing Result did not pass independent complete-contract verification.',
+            request_snapshot, result)
+
     if renderer_callable is None:
         return integration_blocked('RENDERER_UNAVAILABLE', 'RENDERING',
                                    'Renderer is unavailable.', request_snapshot, result)
@@ -148,9 +163,17 @@ def integrate(request, profile, timeout_seconds=5.0, engine_callable=_DEFAULT,
     except Exception as error:
         return integration_blocked('DIRECTIVE_VALIDATOR_ERROR', 'DIRECTIVE_VALIDATION',
                                    type(error).__name__, request_snapshot, result, rendered_directive)
-    if not isinstance(validation_result, dict) or validation_result.get('status') != 'PASS':
+    expected_validation_binding = {
+        'routing_result_id': result['routing_result_id'],
+        'routing_semantic_fingerprint': result['semantic_fingerprint'],
+        'directive_fingerprint': _fingerprint(rendered_directive),
+    }
+    if (not isinstance(validation_result, dict)
+            or validation_result.get('status') != 'PASS'
+            or any(validation_result.get(key) != value
+                   for key, value in expected_validation_binding.items())):
         return integration_blocked('DIRECTIVE_CONFORMANCE_REJECTED', 'DIRECTIVE_VALIDATION',
-                                   'Independent Directive Validator rejected the rendered directive.',
+                                   'Independent Directive Validator rejected the rendered directive or did not bind its PASS result to the Routing Result and directive.',
                                    request_snapshot, result, rendered_directive, validation_result)
 
     return {

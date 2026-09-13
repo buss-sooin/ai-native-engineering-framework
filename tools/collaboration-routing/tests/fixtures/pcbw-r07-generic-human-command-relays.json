@@ -1,0 +1,50 @@
+[
+  {
+    "id": "deterministic-preflight",
+    "kind": "run_tests",
+    "return_kind": "ACK_ONLY",
+    "objective": "Run a deterministic static preflight and acknowledge completion."
+  },
+  {
+    "id": "evidence-capture",
+    "kind": "run_command",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Capture deterministic Evidence and return the raw files for AI interpretation."
+  },
+  {
+    "id": "bounded-polling",
+    "kind": "run_command",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Poll a bounded predicate until its specified terminal condition and return raw output."
+  },
+  {
+    "id": "prepared-script-acknowledgement",
+    "kind": "run_command",
+    "return_kind": "ACK_ONLY",
+    "objective": "Execute the prepared script verbatim and return only completion acknowledgement."
+  },
+  {
+    "id": "database-collection",
+    "kind": "run_command",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Run prepared database metadata and query collection commands and return raw output."
+  },
+  {
+    "id": "kubernetes-collection",
+    "kind": "run_command",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Run prepared kubectl get, describe, events, and logs collection and return raw output."
+  },
+  {
+    "id": "test-output-collection",
+    "kind": "run_tests",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Run the prepared automated test command and return its unprocessed output."
+  },
+  {
+    "id": "application-log-collection",
+    "kind": "run_command",
+    "return_kind": "RAW_OUTPUT_ONLY",
+    "objective": "Collect bounded application and infrastructure logs and return raw output."
+  }
+]

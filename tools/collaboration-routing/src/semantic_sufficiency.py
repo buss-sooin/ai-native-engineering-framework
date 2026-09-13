@@ -16,6 +16,30 @@ HUMAN_NECESSITY_BASES = frozenset({
     'NO_SUITABLE_AUTHORIZED_AI_SURFACE',
 })
 
+HUMAN_RETURN_RESPONSIBILITIES = frozenset({
+    'DECISION_OR_APPROVAL',
+    'RISK_CONTROL_DECISION',
+    'BLAST_RADIUS_CONTROL',
+    'DIRECT_OBSERVATION',
+    'LEARNING_OUTCOME',
+    'DIRECT_ENGINEERING_RESULT',
+    'ACK_ONLY',
+    'RAW_OUTPUT_ONLY',
+})
+
+COMMAND_RELAY_RESPONSIBILITIES = frozenset({'ACK_ONLY', 'RAW_OUTPUT_ONLY'})
+
+HUMAN_NECESSITY_RESPONSIBILITIES = {
+    'HUMAN_AUTHORITY_REQUIRED': frozenset({'DECISION_OR_APPROVAL'}),
+    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE': frozenset({'DIRECT_OBSERVATION'}),
+    'HUMAN_RISK_CONTROL_REQUIRED': frozenset({
+        'RISK_CONTROL_DECISION', 'BLAST_RADIUS_CONTROL'}),
+    'HUMAN_LEARNING_OBJECTIVE': frozenset({'LEARNING_OUTCOME'}),
+    'HUMAN_EXECUTION_SIMPLER_OR_SAFER': frozenset({'DIRECT_ENGINEERING_RESULT'}),
+    'NO_SUITABLE_AUTHORIZED_AI_SURFACE': frozenset({
+        'DIRECT_ENGINEERING_RESULT', 'ACK_ONLY', 'RAW_OUTPUT_ONLY'}),
+}
+
 _PLACEHOLDER_VALUES = frozenset({
     '', 'todo', 'tbd', 'n/a', 'na', 'none', 'null', 'placeholder',
     '미정', '없음', '해당없음', '플레이스홀더',
@@ -35,6 +59,68 @@ def is_human_usable_description(value):
         return False
     text = value.strip()
     return len(text) >= 12 and len(text.split()) >= 2 and not _MACHINE_ID.fullmatch(text)
+
+
+def resolve_trusted_human_responsibility(profile, action_kind, basis, return_kind,
+                                         source_references):
+    """Resolve proof only from the versioned Profile, never from request prose alone."""
+    if (not isinstance(profile, dict) or not isinstance(source_references, list)
+            or not isinstance(action_kind, str)):
+        return None
+    matches = [
+        source for source in profile.get('trusted_human_responsibilities', [])
+        if source.get('human_necessity_basis') == basis
+        and return_kind in source.get('return_responsibility_kinds', [])
+        and action_kind in source.get('action_kinds', [])
+        and source.get('id') in source_references
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def human_return_responsibility_issues(responsibility, basis=None, profile=None,
+                                       action_kind=None, request_responsibility=None,
+                                       session_role=None):
+    """Validate action-bound Human responsibility; Profile prose cannot supply it."""
+    if not isinstance(responsibility, dict) or responsibility.get('state') != 'KNOWN':
+        return ('human_return_responsibility',)
+    value = responsibility.get('value')
+    if not isinstance(value, dict) or set(value) != {
+            'kind', 'description', 'source_references'}:
+        return ('human_return_responsibility',)
+    issues = []
+    kind = value.get('kind')
+    if kind not in HUMAN_RETURN_RESPONSIBILITIES:
+        issues.append('human_return_responsibility.kind')
+    if not is_human_usable_description(value.get('description')):
+        issues.append('human_return_responsibility.description')
+    references = value.get('source_references')
+    if (not isinstance(references, list) or not references
+            or any(not isinstance(item, str) or not item.strip() for item in references)
+            or len(references) != len(set(references))):
+        issues.append('human_return_responsibility.source_references')
+    if basis in HUMAN_NECESSITY_RESPONSIBILITIES:
+        if kind not in HUMAN_NECESSITY_RESPONSIBILITIES[basis]:
+            issues.append('human_return_responsibility.necessity_binding')
+    trusted_source = None
+    if profile is not None and basis in HUMAN_NECESSITY_BASES:
+        trusted_source = resolve_trusted_human_responsibility(
+            profile, action_kind, basis, kind, references)
+        if trusted_source is None:
+            issues.append('human_return_responsibility.trusted_source_binding')
+    if trusted_source is not None and request_responsibility is not None:
+        for owner in trusted_source['required_request_owners']:
+            if request_responsibility.get(owner['request_field']) != {
+                    'state': 'KNOWN', 'value': owner['required_owner']}:
+                issues.append(
+                    'human_return_responsibility.owner_binding.'
+                    + owner['request_field'])
+    if (trusted_source is not None and session_role is not None
+            and session_role != {
+                'state': 'KNOWN',
+                'value': trusted_source['required_session_role'],
+            }):
+        issues.append('human_return_responsibility.session_role_binding')
+    return tuple(issues)
 
 
 def _profile_maps(profile):
@@ -126,8 +212,13 @@ def _structured_issues(structured, context):
                 or not verification.get('value')):
             issues.append('structured_operational_semantics.observation.verification_reference')
 
-    if value.get('decision_criterion_reference') != 'ACTION_VERIFICATION_REQUIREMENT':
+    if value.get('decision_criterion_reference') != 'ACTION_HUMAN_RETURN_RESPONSIBILITY':
         issues.append('structured_operational_semantics.decision_criterion_reference')
+    responsibility = context.get('human_return_responsibility')
+    basis_field = context.get('human_necessity_basis')
+    basis = (basis_field.get('value') if isinstance(basis_field, dict)
+             and basis_field.get('state') == 'KNOWN' else None)
+    issues.extend(human_return_responsibility_issues(responsibility, basis))
     if value.get('interpretation_reference') != 'PROFILE_ACTION_HUMAN_HANDOFF':
         issues.append('structured_operational_semantics.interpretation_reference')
 
@@ -180,6 +271,8 @@ def resolve_human_execution_responsibility(action, step, profile):
         'action_target': action['target'],
         'capabilities': step['required_capabilities'],
         'verification_requirement': action['verification_requirement'],
+        'human_necessity_basis': action['human_necessity_basis'],
+        'human_return_responsibility': action['human_return_responsibility'],
         'selected_surface_id': step['surface_id'],
     }
     interface = resolve_interface(structured['interface_reference'], context)
@@ -187,6 +280,10 @@ def resolve_human_execution_responsibility(action, step, profile):
     resolved_fallback = ({'state': 'NOT_REQUIRED'} if fallback['state'] == 'NOT_REQUIRED'
                          else {'state': 'KNOWN',
                                'value': resolve_interface(fallback['value'], context)})
+    return_value = action['human_return_responsibility']['value']
+    trusted_source = resolve_trusted_human_responsibility(
+        profile, step['kind'], action['human_necessity_basis']['value'],
+        return_value['kind'], return_value['source_references'])
     return {
         'Action ID': action['id'],
         'Human Goal': {
@@ -202,9 +299,22 @@ def resolve_human_execution_responsibility(action, step, profile):
             'capabilities': step['required_capabilities'],
             'verification_requirement': action['verification_requirement']['value'],
         },
-        'Human Decision Required': {
-            'description': handoff['decision'],
-            'verification_requirement': action['verification_requirement']['value'],
+        'Human Decision Required': ({'state': 'NOT_REQUIRED'}
+                                    if action['human_return_responsibility']['value']['kind']
+                                    in COMMAND_RELAY_RESPONSIBILITIES else {
+            'state': 'KNOWN',
+            'value': {
+                'responsibility': action['human_return_responsibility']['value'],
+                'profile_guidance': handoff['decision'],
+                'verification_requirement': action['verification_requirement']['value'],
+            },
+        }),
+        'Human Return Responsibility': action['human_return_responsibility'],
+        'Trusted Human Responsibility Source': {
+            'profile_id': profile['id'],
+            'profile_version': profile['version'],
+            'action_kind': step['kind'],
+            'source': trusted_source,
         },
         'Expected Interpretation': {
             'description': handoff['expected_interpretation'],
@@ -237,6 +347,8 @@ def human_execution_projection_issues(responsibilities, execution_plan, profile)
             'action_target': action.get('target'),
             'capabilities': step.get('required_capabilities'),
             'verification_requirement': action.get('verification_requirement'),
+            'human_necessity_basis': action.get('human_necessity_basis'),
+            'human_return_responsibility': action.get('human_return_responsibility'),
             'selected_surface_id': step.get('surface_id'),
         }
         semantic_issues = human_facing_semantics_issues(

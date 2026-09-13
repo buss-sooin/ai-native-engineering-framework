@@ -29,11 +29,11 @@ Python 3.8 이상의 표준 라이브러리만 사용한다. 외부 패키지 �
 ```sh
 python3 tools/collaboration-routing/src/cli.py route \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.4.0.json
 
 python3 tools/collaboration-routing/src/integration_cli.py \
   --request tools/collaboration-routing/tests/fixtures/inspection.request.json \
-  --profile tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
+  --profile tools/collaboration-routing/profiles/framework-lab.v0.4.0.json
 
 python3 -m unittest discover -s tools/collaboration-routing/tests -v
 ```
@@ -45,7 +45,8 @@ CLI는 표준 출력에 JSON 객체 하나를 반환한다. 종료 코드는 `PA
 | `routing_status` | 전체 검증 결과 |
 | `failure_codes` | 확인된 계약 위반 |
 | `unresolved_issues` | 확정할 수 없는 입력·가용성·권한·검증기 상태 |
-| `resolution_action` | 입력 수정 또는 사람의 판단 후 재검증 안내 |
+| `resolution_action` | 입력 수정, PCBW-R06 영향 부분 재평가 또는 사람의 판단 후 재검증 안내 |
+| `targeted_re_evaluation` | `INVALID_HUMAN_DELEGATION`에 대한 PCBW-R06 재평가 대상 action과 적합한 AI 후보 |
 | `result` | 유효한 입력으로 구성한 구조화된 결과. 입력 형식 오류나 검증기 오류 시 `null` |
 | `directive` | 검증된 `PASS` 지시문. 그 밖의 모든 경우 `null` |
 
@@ -68,9 +69,9 @@ Structured Request → Schema Validation → Capability Resolution
 
 ```text
 Routing Request → Integration Adapter → Request Validation
- → Existing Deterministic Engine → Validated Routing Result
+ → Existing Deterministic Engine → Independent Complete-result Revalidation
  → Existing Renderer → Independent Directive Validator
- → PASS only → Human-visible Pasteable Directive
+ → Result-bound Validation PASS only → Human-visible Pasteable Directive
 ```
 
 책임 경계는 분리되어 있다. standalone Routing Engine은 결정과 의미 상태를 소유한다. Adapter는 호출 순서와 방출 차단만 담당하며 경로·권한·추천을 선택하거나 덮어쓰지 않는다. Renderer는 검증된 결과를 Markdown으로 투영한다. 독립 Validator는 Renderer를 재호출하지 않고 헤더, 제목, 필수 인계 맥락, 실행 환경, 역할, 책임, 권한, 추천과 반환 목적지를 구조적으로 파싱해 Routing Result와 대조한다. 지시문은 사람에게 보이는 산출물일 뿐 실행이 아니며, downstream execution은 이 구현 범위 밖이다.
@@ -80,7 +81,8 @@ Routing Request → Integration Adapter → Request Validation
 | `schemas/routing-request.schema.json` | 필수 행위와 명시적 입력 상태 |
 | `schemas/project-routing-profile.schema.json` | 프로젝트의 행위·역량·환경 매핑 |
 | `schemas/routing-result.schema.json` | 기계 소비용 결과 계약 |
-| `profiles/framework-lab.v0.3.0.json` | Framework Lab의 PCBW-R07 action handoff·운영 인터페이스·가용성 선언 |
+| `profiles/framework-lab.v0.4.0.json` | Framework Lab의 PCBW-R07 신뢰 Human 책임·action handoff·운영 인터페이스·가용성 선언 |
+| `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json` | 실제 Project Instructions에 동기화할 재사용 지시문 방출 의무와 저장소/플랫폼 경계 |
 | `src/schema_validation.py` | 번들 스키마에서 사용하는 JSON Schema 부분집합 검증 |
 | `src/engine.py` | 라우팅, 책임 배분, 권한·경계 검증 및 내부 적합성 검사 |
 | `src/directive.py` | 결정론적 표현과 지시문 적합성 검증 |
@@ -96,7 +98,7 @@ Routing Request → Integration Adapter → Request Validation
 
 `Routing Decision ≠ Authority`, `Routing Result ≠ Directive`, `Directive ≠ Execution`을 유지한다. 운반 어댑터(Execution Adapter)는 포함하지 않는다.
 
-통합 Adapter는 Routing Request의 자연어로 결정 필드를 다시 만들지 않는다. 실행 환경, 세션 역할, 책임, 권한 평가, 모델·추론 추천과 Route Leg는 검증된 Routing Result만 따른다. 일반 요청 맥락은 Engine이 보존한 `source_request`에서 읽지만, PCBW-R07 Human Execution Responsibility의 필수 설명과 인터페이스는 `source_profile`의 신뢰 선언과 해석된 Route Leg에서 생성한다. `Available ≠ Selected ≠ Authorized`와 `Recommended ≠ Selected ≠ Authorized`를 유지한다.
+통합 Adapter는 Routing Request의 자연어로 결정 필드를 다시 만들지 않는다. 실행 환경, 세션 역할, 책임, 권한 평가, 모델·추론 추천과 Route Leg는 검증된 Routing Result만 따른다. Adapter는 Engine이 `PASS`를 반환해도 원본 요청·프로필에서 결과를 다시 계산해 완전 일치를 확인한다. 독립 Directive Validator의 `PASS`에는 `routing_result_id`, 의미 지문과 지시문 지문이 결합되어야 한다. 일반 요청 맥락은 Engine이 보존한 `source_request`에서 읽지만, PCBW-R07 Human Execution Responsibility의 필수 설명과 인터페이스는 `source_profile`의 신뢰 선언과 해석된 Route Leg에서 생성한다. `Available ≠ Selected ≠ Authorized`와 `Recommended ≠ Selected ≠ Authorized`를 유지한다.
 
 ## 통합 실패 차단과 근거
 
@@ -118,11 +120,11 @@ Routing Request → Integration Adapter → Request Validation
 {"state":"NOT_REQUIRED"}
 ```
 
-필수 맥락은 프로젝트, 제목, 목표, 세션 역할, 대상, 현재 상태·관문, 정본 참조, 실행 경계, 금지 행위 목록, 의사결정·검증 책임자, 검증 계약과 반환 계약이다. 이 필드의 `UNKNOWN`은 `UNRESOLVED`, `NOT_REQUIRED`는 계약 모순이다. 금지 행위가 없으면 `KNOWN`과 빈 배열로 명시한다.
+필수 맥락은 프로젝트, 제목, 목표, 세션 역할, 대상, 현재 상태·관문, 정본 참조, 실행 경계, 금지 행위 목록, 의사결정·검증 책임자, 검증 계약과 반환 계약이다. 이 필드의 `UNKNOWN`은 `UNRESOLVED`, `NOT_REQUIRED`는 계약 모순이다. 금지 행위가 없으면 `KNOWN`과 빈 배열로 명시한다. `return_contract.value`는 반환 목적지 `destination`과 행위별 `human_action_returns[]`를 가진다. 각 Human action의 반환 종류는 action 자체의 `human_return_responsibility.value.kind`와 일치해야 하며, 누락·불일치 또는 AI action에 대한 Human 반환 선언은 계약 위반이다.
 
 중단 조건·근거 요구·브랜치/리비전/환경은 적용되지 않을 때 `NOT_REQUIRED`를 허용한다. 적용 여부를 아직 모르는 `UNKNOWN`은 보수적으로 `UNRESOLVED`다. `surface_selection=NOT_REQUIRED`는 명시적 선택 없이 프로필로 선택하라는 뜻이다. `KNOWN`이면 모든 action ID를 한 번씩 지정해야 한다.
 
-각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 세 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis)와 사람 대상 운영 의미가 의미상 필수다. `human_facing_semantics`에는 구조화된 신뢰 reference와 선택적인 `supplemental_note`만 허용한다. action·target·capability·surface·verification binding이나 Profile interface 해석이 실패하면 `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT`다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
+각 필수 행위는 `id`, `kind`, `target`, `effects`, `source_references`, `actor`, `human_direct`, `session_role`, `verification_requirement`, `authority`, `approval_reference`를 가진다. PCBW-R07 확장 필드는 `human_necessity_basis`, `human_return_responsibility`, `targeted_re_evaluation_established`, `human_facing_semantics`다. `human_direct`는 사람이 직접 수행하는지 명시하며 `actor`와 일치해야 한다. AI 실행에는 네 확장 필드를 생략하거나 `NOT_REQUIRED`로 선언할 수 있다. 사람 실행에는 사람 필요성 근거(Human Necessity Basis), 행위에 결합된 사람 반환 책임(Human Return Responsibility)과 사람 대상 운영 의미가 의미상 필수다. Human action의 `human_necessity_basis={"state":"NOT_REQUIRED"}`는 사람 필요성을 평가했으며 필요하지 않다고 확인한 상태로, 필드 누락 또는 `UNKNOWN`과 다르다. `KNOWN`의 인식되지 않은 basis도 스키마 형태는 보존하되 Engine에서 의미상 무효로 판정한다. `human_return_responsibility`는 승인·위험 통제·영향 범위 통제·직접 관측·학습·직접 엔지니어링 결과와 `ACK_ONLY`·`RAW_OUTPUT_ONLY`를 구분하고, 설명과 근거 참조를 함께 가진다. `human_facing_semantics`에는 구조화된 신뢰 reference와 선택적인 `supplemental_note`만 허용한다. action·target·capability·surface·verification·사람 반환 책임 binding이나 Profile interface 해석이 실패하면 차단한다. `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에는 확인된 영향 부분 재평가가 추가로 필요하다. 행위별 대상은 승인 경계의 대상과 정확히 대조한다. 동일 행위 종류를 여러 번 사용하려면 서로 다른 ID를 사용한다. 미등록 종류는 `REQUIRED_CAPABILITY_UNKNOWN`이다.
 
 프로필 요청은 정확한 ID·버전으로 지정한다. 다른 버전이 제공되면 `PROFILE_VERSION_UNAVAILABLE`이며 암묵적으로 최신 버전으로 교체하지 않는다. 정본 충돌 상태는 `CLEAR / CONFLICT / UNKNOWN`으로 구분하며, 충돌 또는 미확정은 `CANONICAL_CONFLICT`로 반환한다.
 
@@ -135,9 +137,9 @@ Routing Request → Integration Adapter → Request Validation
 | `reason_context` | `context_reasoning` | ChatGPT 일반 Chat |
 | `inspect_repository` | `repository_inspection` | ChatGPT Work mode |
 | `edit_document` | `document_edit` | ChatGPT Work mode |
-| `mutate_repository` | `repository_mutation` | Codex Project / Session |
-| `git_branch` | `git_operation` | Codex Project / Session |
-| `run_command`, `run_tests` | `command_execution` | Codex Project / Session |
+| `mutate_repository` | `repository_mutation` | Codex CLI |
+| `git_branch` | `git_operation` | Codex CLI |
+| `run_command`, `run_tests` | `command_execution` | Codex CLI |
 | `observe_runtime` | `runtime_observation` | Human IDE / Terminal |
 | `mutate_runtime` | `runtime_mutation` | Human IDE / Terminal |
 
@@ -168,14 +170,17 @@ Routing Request → Integration Adapter → Request Validation
 
 | 조건 | 판정 |
 | --- | --- |
-| 사람 실행 + `human_necessity_basis` 미확정 | `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` |
+| 사람 실행 + `human_necessity_basis` 누락 또는 `UNKNOWN`, 다른 구조에서 부재를 확정할 수 없음 | `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` |
+| 결정론적 사람 실행 + `human_necessity_basis=NOT_REQUIRED` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
+| 결정론적 사람 실행 + 인식되지 않은 basis 또는 basis와 불일치하는 반환 책임 + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
+| 결정론적 사람 실행 + `ACK_ONLY` 또는 `RAW_OUTPUT_ONLY` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 재평가 미확인 | `UNRESOLVED / TARGETED_RE_EVALUATION_NOT_ESTABLISHED` |
 | 결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | 비결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / NO_SUITABLE_AI_SURFACE_CONTRADICTION` |
 | 사람 실행 + 사람 대상 운영 의미 미확정 | `FAIL / HUMAN_FACING_SEMANTICS_INSUFFICIENT` |
 | 승인된 다른 사람 필요성 근거 + 완전한 운영 의미 | 기존 역량·effect·권한·경계 검증을 계속 수행하고 모두 충족하면 `PASS` |
 
-사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 필수 설명은 Profile action의 `human_handoff`와 실제 target·capability·verification context에서 결정론적으로 생성한다. 요청이 제공할 수 있는 `supplemental_note`는 별도 표시만 하며 필수 의미를 만들거나 덮어쓰지 않는다. Interface는 실제 선택 surface를 참조하는 `SELECTED_EXECUTION_SURFACE` 또는 Profile registry를 참조하는 `PROFILE_OPERATIONAL_INTERFACE`만 허용한다. 요청은 interface 표시 이름을 선언할 수 없다. CLI fallback도 같은 reference로 해석하거나 `NOT_REQUIRED`로 명시한다.
+사람 대상 운영 의미에는 Human Goal, Human Necessity Basis, 주 운영 인터페이스·도구, 관측 대상, 사람의 판단 사항, 사람 반환 책임, 기대 해석과 적용 가능한 CLI 대체 절차가 포함된다. 필수 설명은 Profile action의 `human_handoff`와 실제 target·capability·verification context에서 결정론적으로 생성한다. 다만 Profile의 일반적인 `decision` 문장만으로 `Human Decision Required`를 성립시키지 않는다. `decision_criterion_reference=ACTION_HUMAN_RETURN_RESPONSIBILITY`가 실제 action의 구조화된 반환 책임에 결합되어야 한다. `ACK_ONLY`와 `RAW_OUTPUT_ONLY`는 `Human Decision Required={"state":"NOT_REQUIRED"}`로 투영되어 승인·판단·직접 관측 책임처럼 보이지 않는다. 요청이 제공할 수 있는 `supplemental_note`는 별도 표시만 하며 필수 의미를 만들거나 덮어쓰지 않는다. Interface는 실제 선택 surface를 참조하는 `SELECTED_EXECUTION_SURFACE` 또는 Profile registry를 참조하는 `PROFILE_OPERATIONAL_INTERFACE`만 허용한다. 요청은 interface 표시 이름을 선언할 수 없다. CLI fallback도 같은 reference로 해석하거나 `NOT_REQUIRED`로 명시한다.
 
 Engine은 action ID, target state, capability 집합, 선택 surface, action 검증 요구를 실제 요청·Profile 계산 결과와 대조한다. named interface reference는 선택 Profile에 존재하고 실제 Human surface 및 전체 action capability와 호환되어야 한다. Profile의 Human handoff 설명은 불투명한 ID만으로 구성되지 않도록 최소 구조를 검증한다. 따라서 `banana`, 새로운 동의어 또는 요청 내부의 중복 self-declaration은 신뢰를 만들 수 없다. 자연어의 진실성이나 외부 제품 존재 여부는 판단하지 않는다.
 
@@ -208,7 +213,7 @@ python3 tools/collaboration-routing/src/cli.py validate-directive \
 ```sh
 python3 tools/collaboration-routing/src/cli.py validate-schema \
   --kind project-routing-profile \
-  --document tools/collaboration-routing/profiles/framework-lab.v0.3.0.json
+  --document tools/collaboration-routing/profiles/framework-lab.v0.4.0.json
 ```
 
 `validate-schema`의 `PASS`는 `SCHEMA_ONLY`로 표시하며 실행 가능한 결과의 의미 검증을 뜻하지 않는다. 프로필의 경우 중복 식별자·참조·권한 면제도 함께 검사한다. 라우팅과 지시문의 의미 검증은 `route`와 `validate-directive`를 사용한다.
@@ -260,6 +265,7 @@ Review 64 시점의 보정에서는 Framework Governance, PCBW, Project Instruct
 | 해결 유형 | 대표 원인 | 책임과 다음 동작 |
 | --- | --- | --- |
 | `INPUT_COMPLETION` | 필수 입력·역량 종류 미확정, 구조적 계약 모순 | 입력을 보완·수정한 뒤 재검증 |
+| `TARGETED_RE_EVALUATION` | `INVALID_HUMAN_DELEGATION` | 반환된 적합 AI 후보로 PCBW-R06 영향 부분 재평가. 거부한 사람 지시문을 자동 재작성·방출하지 않음 |
 | `ENVIRONMENT_RESOLUTION` | 프로필 버전·환경 미가용, 역량·effect 불일치 | 요구 수준을 낮추지 않고 적합한 환경을 확인한 뒤 재검증 |
 | `HUMAN_RESOLUTION` | 정본 충돌, 동률 선택, 권한 미확정·거부, 금지 행위, 책임 불일치 | 책임 있는 사람에게 판단을 반환. 새로운 승인이 필요하다고 자동 단정하지 않음 |
 | `HUMAN_GATE` | `AUTHORITY_REQUIRED` 또는 `BOUNDARY_TARGET_INSUFFICIENT`, `BOUNDARY_ACTION_INSUFFICIENT`, `BOUNDARY_EFFECT_INSUFFICIENT` | 대상·행위·effect를 포함하는 승인을 받거나 요청을 기존 승인 경계 안으로 축소한 뒤 재검증. 기존 금지·거부를 무효화하지 않음 |
@@ -324,3 +330,54 @@ Framework Governance와 Failure Reproduction Workflow·Conformance·Reproduction
 필수 Human 설명은 `actions[].human_handoff`에서, named interface는 `operational_interfaces`에서 해석한다. Request는 `SELECTED_EXECUTION_SURFACE` 또는 `PROFILE_OPERATIONAL_INTERFACE`의 ID만 참조하며 display name을 선언하지 않는다. Profile interface는 실제 선택 Human surface와 전체 action capability에 모두 호환되어야 한다. CLI fallback도 동일한 신뢰 reference를 사용한다. 기존 여섯 설명 필드는 Request 1.3에서 제거했고 임의 문맥은 `supplemental_note`로만 보존한다. Renderer와 독립 Validator는 신뢰 문맥에서 동일한 사람 책임을 재구성한다.
 
 이전 Schema 1.1과 취약한 1.2 Human request는 자동 변환하지 않고 입력 경계에서 비방출한다. 전체 98개 테스트 메서드는 세 기존 exploit, `banana`, fallback mismatch, interface 소유권·surface·capability, 잘못된 action·target·verification binding, 위조 PASS, 한국어 기술 명사와 선택 surface/GUI/CLI 정상 경로를 검증한다. 이 Profile registry는 Collaboration Routing Engine의 프로젝트 데이터이며 새 PCBW 정본 요소가 아니다.
+
+## 68A 재현 및 69 교정: 알려진 사람 필요성 부재와 Project 방출 회귀
+
+시작 리비전 `cf32486bba42eeaeae6165538405d8ffd67d83f4`의 Request 1.3·Profile 0.3.0으로 관측 지시문을 충실히 투영하면 `ARTIFACT_WRITE`를 지원하지 않는 Human surface까지 함께 평가된다. 실제 결과는 `FAIL`, failure code `HEADER_BODY_MISMATCH`·`SURFACE_EFFECT_MISMATCH`, unresolved issue `HUMAN_NECESSITY_BASIS_MISSING`·`NO_FEASIBLE_SURFACE_AVAILABLE`·`REQUIRED_CAPABILITY_UNAVAILABLE`, `directive=null`의 복합 결과다. 이전의 `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` 단독 설명은 `ARTIFACT_WRITE`를 제외해 사람 필요성 상태만 격리한 최소 모델이며, 충실한 관측 fixture baseline이 아니다. 재실행한 baseline projection은 `tests/fixtures/pcbw-r07-observed-baseline-projection.json`에 고정한다.
+
+교정 후 Routing Request·Result Schema는 `1.5`, Engine·Integration은 `0.6.0`이다. `human_necessity_basis=NOT_REQUIRED`를 알려진 사람 필요성 부재로 해석하고, `human_return_responsibility`를 추가했다. 인식되지 않은 basis는 Schema가 원문을 보존한 상태에서 Engine이 의미상 검증한다. 결정론적 행위를 사람에게 배정했는데 적합하고 권한 있는 AI 환경이 존재하고 사람 필요성이 `NOT_REQUIRED`·인식 불가이거나 반환 책임과 구조적으로 불일치하면 `FAIL / INVALID_HUMAN_DELEGATION`이다. `ACK_ONLY`와 `RAW_OUTPUT_ONLY`도 이 조건에서 동일하게 실패한다. basis가 실제로 누락 또는 `UNKNOWN`이고 다른 구조가 부재를 확정하지 않을 때만 `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING`을 유지한다.
+
+상태 의미는 다음과 같이 분리한다.
+
+| 사람 필요성 입력 | 의미 | 결정론적 Human 배정과 적합·권한 있는 AI 후보가 있을 때 |
+| --- | --- | --- |
+| 필드 누락 | 아직 판정하지 못함 | `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` |
+| `UNKNOWN` | 판정 결과를 알 수 없음 | `UNRESOLVED / HUMAN_NECESSITY_BASIS_MISSING` |
+| `NOT_REQUIRED` | 사람 필요성이 없음을 확인함 | `FAIL / INVALID_HUMAN_DELEGATION` |
+| 유효한 Human necessity | 반환 책임·운영 의미와 구조적으로 결합된 사람 고유 책임 | 나머지 권한·환경 계약이 유효하면 `PASS` 가능 |
+
+`return_contract`는 더 이상 목적지 문장만 받지 않는다. 행위별 구조화 반환 종류를 `human_action_returns[]`로 선언하고 action의 반환 책임과 교차 검증한다. `HUMAN_EXECUTION_SIMPLER_OR_SAFER`라는 basis만으로는 충분하지 않으며, `DIRECT_ENGINEERING_RESULT`와 행위·대상·검증·운영 인터페이스에 결합된 실제 Human 책임이 있어야 한다. 준비된 명령·스크립트 실행 뒤 ACK, 원시 stdout, PASS/FAIL 출력 또는 Evidence 경로만 반환하는 경우는 사람의 결정 책임을 성립시키지 않는다.
+
+`INVALID_HUMAN_DELEGATION`은 `TARGETED_RE_EVALUATION` 해결 유형으로 PCBW-R06에 연결된다. Routing Result의 `targeted_re_evaluation[]`은 영향을 받은 action, 원인, 거부된 Human surface와 적합한 AI 후보의 surface ID·표시 이름·역량·effect·권한 상태·모델·추론 추천을 반환한다. 후보에는 `selection_status=REEVALUATION_CANDIDATE`를 명시한다. 이는 선택이나 새 권한 부여가 아니다. Engine과 Integration은 후보를 새 선택으로 자동 적용하거나 사람 지시문을 고쳐 쓰지 않는다. 관측 fixture의 결과는 `Codex CLI` 후보, `directive=null`, `emission_outcome=BLOCKED`다.
+
+회귀 fixture는 관측된 Bash 실행·hash 검증·정적 사전 점검·Docker inspect/logs/stats·Evidence 및 안정성 계획 파일 작성·완료 ACK 반환 책임을 한 action 계약으로 보존한다. 범용 회귀는 결정론적 사전 점검, Evidence 수집, 제한된 폴링, 준비된 스크립트와 완료 ACK, database·Kubernetes·test·log 수집을 포함한다. 대조 회귀는 유효한 사람 승인, 영향 범위 통제(Blast-radius Control), 사람 학습·직접 관측 목적, 적합한 AI 환경 부재와 기존 Human Direct Engineering을 보존한다.
+
+통합 Adapter는 Engine의 `PASS` 결과도 원본 Request·Profile에서 독립 재계산하며, 독립 Directive Validator의 `PASS`가 Routing Result ID·의미 지문·지시문 지문에 결합되었을 때만 방출한다. 자유형 Project 지시문, 위조 Routing Result 또는 결과에 결합되지 않은 Validator `PASS`는 모두 `directive=null`, `emission_outcome=BLOCKED`다.
+
+Project Routing Profile Schema `1.2`와 Framework Lab Profile `0.3.0`은 변경하지 않았다. 이번 교정은 action 요청·결과와 방출 관문의 의미를 명확히 하며 Profile의 action·surface·interface·가용성 선언을 바꾸지 않기 때문이다. PCBW-R07 정본 의미를 변경하거나 PCBW-R08을 만들지 않았다.
+
+이 통합은 계속 운영자 매개 로컬 시험(Operator-mediated Local Trial)이다. 저장소 밖의 실제 ChatGPT Project 재사용 지시문 생성 경로가 이 Adapter를 반드시 호출하도록 만드는 플랫폼 설정 또는 ChatGPT-native interceptor는 이 저장소에 없다. 따라서 테스트 통과는 라이브 Project 집행을 증명하지 않는다. 라이브 강제 적용에는 Project Control Plane의 지시문 생성·방출 직전 지점에 Routing Request 구성, 이 Adapter 호출, `EMITTED` 외 결과의 방출 금지를 배포할 플랫폼 소유 권한이 필요하다.
+
+저장소가 지원하는 가장 강한 Project 수준 계약은 `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json`이다. 이 아티팩트는 모든 재사용 Routing/Handoff 지시문을 방출하기 전에 Required Action·Capability·Human Necessity를 평가하고, 결정론적 Human command relay를 거부하며, PCBW-R06 영향 부분 재평가 후 Routing Result와 Directive Validation이 모두 `PASS`일 때만 방출하도록 요구한다. `Human IDE / Terminal`을 missing-capability 기본 fallback으로 사용하는 것도 금지한다. 아티팩트 상태는 `CANDIDATE_FOR_EXTERNAL_PROJECT_SYNCHRONIZATION`이며 저장소 테스트는 내용과 로컬 Integration 동작의 일치만 검증한다. 실제 ChatGPT Project Instructions 반영과 그 독립 확인은 플랫폼/Project 설정 소유자가 수행해야 하므로 **EXTERNAL PROJECT SYNCHRONIZATION REQUIRED**다.
+
+## 68C 교정: 통합 입력 결합과 신뢰 Human 책임
+
+`0.6.0` Integration은 반환된 Routing Result 자체를 재검증했지만, 그 Result가 현재 `integrate(request, profile)` 호출에 전달된 입력에서 생성되었는지는 대조하지 않았다. 따라서 다른 유효 Request에서 생성된 self-validating `PASS` Result를 주입하면 현재 호출의 Renderer까지 진행해 지시문을 방출할 수 있었다. `0.7.0`은 Renderer 호출 전에 `result.source_request == request_snapshot`과 `result.source_profile == profile_snapshot`을 모두 확인한다. 하나라도 다르면 `INTEGRATION_BLOCKED / ROUTING_RESULT_INPUT_MISMATCH`, `directive=null`, `emission_outcome=BLOCKED`다.
+
+Request가 `HUMAN_EXECUTION_SIMPLER_OR_SAFER`, `DIRECT_ENGINEERING_RESULT`와 임의 설명·source reference를 함께 선언하는 것만으로는 사람 필요성과 책임을 증명하지 못한다. Framework Lab Profile `0.4.0`은 `trusted_human_responsibilities[]`에서 basis, 반환 책임 종류, 적용 action kind와 Human role의 신뢰 가능한 조합을 소유한다. Engine은 Request의 `human_return_responsibility.source_references[]`가 선택된 Profile의 정확한 source ID와 결합되는지 검사한다. Request 문장은 주장과 부가 맥락으로 보존되지만 자신의 PASS 근거가 될 수 없다. 유효한 Human 승인, 위험·영향 범위 통제, 학습, 직접 관측, 실제 직접 엔지니어링과 재평가로 확인된 no-AI-surface 경로는 Profile source에 결합되어 계속 허용된다.
+
+버전은 Routing Request Schema `1.5` 유지, Routing Result Schema `1.6`, Project Routing Profile Schema `1.3`, Framework Lab Profile `0.4.0`, Engine·Integration `0.7.0`이다. Profile의 `codex` surface label은 제품·저장소 식별자를 섞지 않은 `Codex CLI`로 정규화했다. 저장소 identity는 Request의 target과 branch/revision/environment 맥락에 남는다.
+
+관측 fixture는 실제 파일 생성 책임을 반영해 action effect와 승인 경계에 `ARTIFACT_WRITE`를 추가했다. command-only R07 판정은 별도의 범용 fixture에서 계속 격리한다. 관측 fixture의 AI decision ownership과 ACK-only return contract를 유지한 채 basis·action 반환 종류·임의 source만 바꾸는 회귀와, top-level 반환 종류까지 같은 주장으로 바꾸는 회귀는 모두 `FAIL / INVALID_HUMAN_DELEGATION`이고 방출되지 않는다.
+
+실제 ChatGPT Project 경계는 바뀌지 않았다. 공식 OpenAI 문서는 Project instructions가 Project의 chats에 적용되며 Codex CLI는 ChatGPT Projects view를 제공하지 않는다고 설명한다. 저장소에는 Project 응답을 자동 가로채는 플랫폼 interceptor가 없으므로, 로컬 Integration PASS는 실제 Project Instructions 동기화를 증명하지 않는다. `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json`의 외부 동기화와 독립 확인이 계속 필요하다.
+
+## 71 교정: action-instance Human 책임 소유권 결합
+
+Profile `trusted_human_responsibilities[]`의 source ID는 허용된 basis·반환 종류·action kind·Human role의 카탈로그 항목일 뿐, 현재 action에 그 책임이 실제 배정됐다는 증거가 아니다. `0.7.0` 후보에서는 관측 command relay가 `framework-lab:direct-engineering` ID를 복사하고 basis와 반환 종류를 `HUMAN_EXECUTION_SIMPLER_OR_SAFER`·`DIRECT_ENGINEERING_RESULT`로 바꾸면, AI가 decision과 verification을 계속 소유해도 `PASS / EMITTED`가 되는 결함이 있었다.
+
+Project Routing Profile Schema `1.4`는 각 신뢰 Human role에 `required_session_role`과 `required_request_owners[]`를 추가한다. 전자는 action instance의 session role을 Profile이 소유한 역할과 정확히 결합하고, 후자의 각 항목은 `responsibility.decision_owner` 또는 `responsibility.verification_owner`와 Profile이 소유한 정확한 책임자 identity를 결합한다. `DIRECT_ENGINEER`는 전용 session role과 두 책임자 모두를 요구하고, 승인·위험 통제·학습은 decision owner, 직접 관측은 verification owner를 요구한다. `EXECUTION_ONLY_WHEN_NO_AI_SURFACE`는 검증된 AI surface 부재 자체가 실행 책임 근거이므로 별도 decision/verification owner를 요구하지 않는다.
+
+Engine은 action ID·kind·actor·선택 Human surface·basis·반환 종류·session role·target·effect·verification·action 반환 계약의 기존 교차 검증에 이 Profile 소유 owner binding을 추가한다. 따라서 관측 fixture가 AI decision/verification ownership과 command-relay topology를 유지한 채 정확한 `framework-lab:direct-engineering` ID를 복사해도 `FAIL / INVALID_HUMAN_DELEGATION`이다. 이 판정에는 자유 텍스트 keyword나 `done`·`완료` 같은 어휘를 사용하지 않는다.
+
+현재 계약 버전은 Routing Request Schema `1.5`, Routing Result Schema `1.7`, Project Routing Profile Schema `1.4`, Framework Lab Profile 후보 `0.4.0`, Engine·Integration `0.8.0`이다. Profile `0.4.0`은 아직 커밋·게시된 기준선이 아닌 하나의 미커밋 후보이므로 같은 후보 파일 안에서 완성했다. PCBW-R07 정본 의미와 외부 Project synchronization 경계는 변경하지 않았다.

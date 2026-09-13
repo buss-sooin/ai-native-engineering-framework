@@ -35,6 +35,52 @@ CAPABILITIES = {
     'mutate_runtime': ['runtime_mutation'],
 }
 
+RETURN_KIND_BY_BASIS = {
+    'HUMAN_AUTHORITY_REQUIRED': 'DECISION_OR_APPROVAL',
+    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE': 'DIRECT_OBSERVATION',
+    'HUMAN_RISK_CONTROL_REQUIRED': 'RISK_CONTROL_DECISION',
+    'HUMAN_LEARNING_OBJECTIVE': 'LEARNING_OUTCOME',
+    'HUMAN_EXECUTION_SIMPLER_OR_SAFER': 'DIRECT_ENGINEERING_RESULT',
+    'NO_SUITABLE_AUTHORIZED_AI_SURFACE': 'DIRECT_ENGINEERING_RESULT',
+}
+
+TRUSTED_SOURCE_BY_BASIS = {
+    'HUMAN_AUTHORITY_REQUIRED': 'framework-lab:human-authority',
+    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE': 'framework-lab:direct-observation',
+    'HUMAN_RISK_CONTROL_REQUIRED': 'framework-lab:risk-control',
+    'HUMAN_LEARNING_OBJECTIVE': 'framework-lab:learning',
+    'HUMAN_EXECUTION_SIMPLER_OR_SAFER': 'framework-lab:direct-engineering',
+    'NO_SUITABLE_AUTHORIZED_AI_SURFACE': 'framework-lab:no-ai-surface',
+}
+
+SESSION_ROLE_BY_BASIS = {
+    'HUMAN_AUTHORITY_REQUIRED': 'Human Approval Authority',
+    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE': 'Human Direct Observer',
+    'HUMAN_RISK_CONTROL_REQUIRED': 'Human Risk Controller',
+    'HUMAN_LEARNING_OBJECTIVE': 'Human Learning Investigator',
+    'HUMAN_EXECUTION_SIMPLER_OR_SAFER': 'Human Direct Engineering Owner',
+    'NO_SUITABLE_AUTHORIZED_AI_SURFACE': (
+        'Human Executor After AI Surface Re-evaluation'),
+}
+
+
+def human_return_responsibility(basis=None, kind=None):
+    selected = kind or RETURN_KIND_BY_BASIS.get(basis, 'DIRECT_ENGINEERING_RESULT')
+    return known({
+        'kind': selected,
+        'description': 'Perform and return the action-bound Human responsibility for independent review.',
+        'source_references': [TRUSTED_SOURCE_BY_BASIS.get(
+            basis, 'fixture:untrusted-human-return-assertion')],
+    })
+
+
+def bind_human_return(request, action, responsibility):
+    action['human_return_responsibility'] = responsibility
+    request['return_contract']['value']['human_action_returns'] = (
+        [{'action_id': action['id'],
+          'responsibility_kind': responsibility['value']['kind']}]
+        if responsibility.get('state') == 'KNOWN' else [])
+
 
 def structured_semantics(action_id, capabilities, interface_id='human-terminal',
                          interface_source='SELECTED_EXECUTION_SURFACE', cli_fallback=True):
@@ -47,7 +93,7 @@ def structured_semantics(action_id, capabilities, interface_id='human-terminal',
             'capability_ids': list(capabilities),
             'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
         },
-        'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        'decision_criterion_reference': 'ACTION_HUMAN_RETURN_RESPONSIBILITY',
         'interpretation_reference': 'PROFILE_ACTION_HUMAN_HANDOFF',
         'cli_fallback': known({
             'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': 'redis-cli',
@@ -66,7 +112,7 @@ def human_semantics(kind, action_id='a0', capabilities=None):
 
 class RoutingTests(unittest.TestCase):
     def setUp(self):
-        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.3.0.json')
+        self.profile = load_json(ROOT / 'profiles/framework-lab.v0.4.0.json')
         self.request = load_json(ROOT / 'tests/fixtures/inspection.request.json')
 
     def make(self, *kinds):
@@ -85,15 +131,27 @@ class RoutingTests(unittest.TestCase):
                 'source_references': known(['fixture:' + kind]), 'human_direct': known(human),
                 'human_necessity_basis': known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
                                                 else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
+                'human_return_responsibility': human_return_responsibility(
+                    'DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
+                    else 'HUMAN_RISK_CONTROL_REQUIRED') if human else nr(),
                 'targeted_re_evaluation_established': nr(),
                 'human_facing_semantics': human_semantics(
                     kind, 'a' + str(index), definition['capabilities']) if human else nr(),
                 'verification_requirement': known(['Verify ' + kind + ' against the supplied target.']),
-                'session_role': known('Human Runtime Operator' if human else 'AI Task Reviewer'),
+                'session_role': known(
+                    SESSION_ROLE_BY_BASIS[
+                        'DIRECT_HUMAN_OBSERVATION_OBJECTIVE' if kind == 'observe_runtime'
+                        else 'HUMAN_RISK_CONTROL_REQUIRED']
+                    if human else 'AI Task Reviewer'),
                 'approval_reference': known('fixture-only human approval; not live authorization') if required else nr()})
         request['approved_execution_boundary'] = known({'target': request['target']['value'],
             'allowed_action_ids': [a['id'] for a in request['required_actions']], 'allowed_effects': sorted(effects)})
         request['prohibited_actions'] = known([])
+        request['return_contract']['value']['human_action_returns'] = [
+            {'action_id': action['id'],
+             'responsibility_kind': action['human_return_responsibility']['value']['kind']}
+            for action in request['required_actions']
+            if action['actor'] == known('HUMAN')]
         return request
 
     def codes(self, envelope):
@@ -101,14 +159,18 @@ class RoutingTests(unittest.TestCase):
 
     def humanize(self, request, basis, reevaluated=nr(), semantics=None):
         action = request['required_actions'][0]
+        responsibility = human_return_responsibility(basis)
         action.update(actor=known('HUMAN'), human_direct=known(True),
                       human_necessity_basis=known(basis) if basis else {'state': 'UNKNOWN'},
+                      human_return_responsibility=responsibility,
                       targeted_re_evaluation_established=copy.deepcopy(reevaluated),
                       human_facing_semantics=human_semantics(
                           action['kind']['value'], action['id'], CAPABILITIES[action['kind']['value']]
                       ) if semantics is None else semantics,
-                      session_role=known('Human Execution Operator'))
+                      session_role=known(SESSION_ROLE_BY_BASIS.get(
+                          basis, 'Human Execution Operator')))
         request['surface_selection'] = known([{'action_id': action['id'], 'surface_id': 'human-terminal'}])
+        bind_human_return(request, action, responsibility)
         return request
 
     def assertBlocked(self, envelope, status, code):
@@ -201,6 +263,236 @@ class RoutingTests(unittest.TestCase):
                 envelope = engine.evaluate(request, self.profile)
                 self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
 
+    def test_pcbw_r07_known_absence_and_command_relay_regressions(self):
+        fixtures = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-generic-human-command-relays.json')
+        for fixture in fixtures:
+            with self.subTest(fixture=fixture['id']):
+                request = self.humanize(self.make(fixture['kind']), None)
+                action = request['required_actions'][0]
+                request['objective'] = known(fixture['objective'])
+                action['human_necessity_basis'] = nr()
+                bind_human_return(request, action, human_return_responsibility(
+                    kind=fixture['return_kind']))
+                action['source_references'] = known(['generic-regression:' + fixture['id']])
+                envelope = engine.evaluate(request, self.profile)
+                self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+                self.assertEqual(
+                    {item['kind'] for item in envelope['resolution_action']},
+                    {'TARGETED_RE_EVALUATION'})
+                reevaluation = envelope['result']['targeted_re_evaluation']
+                self.assertEqual(len(reevaluation), 1)
+                self.assertEqual(reevaluation[0]['rule'], 'PCBW-R06')
+                self.assertEqual(reevaluation[0]['status'], 'TARGETED_RE_EVALUATION')
+                self.assertEqual(
+                    [item['surface_id'] for item in reevaluation[0]['candidate_surfaces']],
+                    ['codex'])
+                self.assertEqual(
+                    reevaluation[0]['candidate_surfaces'][0]['authority_status'],
+                    'AUTHORIZED')
+                self.assertEqual(
+                    reevaluation[0]['candidate_surfaces'][0]['selection_status'],
+                    'REEVALUATION_CANDIDATE')
+
+    def test_pcbw_r07_observed_project_directive_fixture(self):
+        request = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-observed-human-command-relay.request.json')
+        action = request['required_actions'][0]
+        definition = next(item for item in self.profile['actions']
+                          if item['kind'] == action['kind']['value'])
+        self.assertTrue(definition['deterministic'])
+        self.assertEqual(action['actor'], known('HUMAN'))
+        self.assertEqual(request['surface_selection']['value'][0]['surface_id'],
+                         'human-terminal')
+        self.assertEqual(action['human_necessity_basis'], nr())
+        self.assertEqual(action['human_return_responsibility']['value']['kind'],
+                         'ACK_ONLY')
+        self.assertEqual(set(action['effects']['value']),
+                         {'COMMAND_EXECUTION', 'ARTIFACT_WRITE'})
+        self.assertEqual(
+            set(request['approved_execution_boundary']['value']['allowed_effects']),
+            {'COMMAND_EXECUTION', 'ARTIFACT_WRITE'})
+        envelope = engine.evaluate(request, self.profile)
+        self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+        self.assertEqual(envelope['unresolved_issues'], [])
+        reevaluation = envelope['result']['targeted_re_evaluation'][0]
+        self.assertEqual(reevaluation['rule'], 'PCBW-R06')
+        self.assertEqual(reevaluation['status'], 'TARGETED_RE_EVALUATION')
+        self.assertEqual(reevaluation['rejected_surface'], {
+            'surface_id': 'human-terminal',
+            'surface_label': 'Human IDE / Terminal',
+            'actor': 'HUMAN',
+        })
+        self.assertEqual(reevaluation['candidate_surfaces'][0]['surface_id'], 'codex')
+        self.assertEqual(reevaluation['candidate_surfaces'][0]['surface_label'],
+                         'Codex CLI')
+        self.assertEqual(reevaluation['candidate_surfaces'][0]['actor'], 'AI')
+        self.assertEqual(reevaluation['candidate_surfaces'][0]['authority_status'],
+                         'AUTHORIZED')
+        self.assertEqual(reevaluation['candidate_surfaces'][0]['selection_status'],
+                         'REEVALUATION_CANDIDATE')
+
+    def test_pcbw_r07_profile_catalog_does_not_replace_action_owner_binding(self):
+        request = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-observed-human-command-relay.request.json')
+        action = request['required_actions'][0]
+        action['human_necessity_basis'] = known(
+            'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+        responsibility = human_return_responsibility(
+            'HUMAN_EXECUTION_SIMPLER_OR_SAFER', 'DIRECT_ENGINEERING_RESULT')
+        bind_human_return(request, action, responsibility)
+
+        envelope = engine.evaluate(request, self.profile)
+        self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+        self.assertEqual(
+            envelope['result']['targeted_re_evaluation'][0]['candidate_surfaces'][0][
+                'surface_label'],
+            'Codex CLI')
+
+    def test_pcbw_r07_inconsistent_responsibility_ownership_fails_closed(self):
+        for field in ('decision_owner', 'verification_owner'):
+            with self.subTest(field=field):
+                request = self.humanize(
+                    self.make('run_command'), 'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+                request['responsibility'][field] = known('AI Project Control Plane')
+                self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                                   'INVALID_HUMAN_DELEGATION')
+        request = self.humanize(
+            self.make('run_command'), 'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+        request['required_actions'][0]['session_role'] = known(
+            'Human IDE / Terminal command relay')
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'INVALID_HUMAN_DELEGATION')
+
+    def test_pcbw_r07_observed_baseline_projection_is_documented_truthfully(self):
+        projection = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-observed-baseline-projection.json')
+        self.assertEqual(projection['baseline_revision'],
+                         'cf32486bba42eeaeae6165538405d8ffd67d83f4')
+        self.assertEqual(projection['effects'],
+                         ['COMMAND_EXECUTION', 'ARTIFACT_WRITE'])
+        self.assertEqual(projection['routing_status'], 'FAIL')
+        self.assertEqual(set(projection['failure_codes']), {
+            'HEADER_BODY_MISMATCH', 'SURFACE_EFFECT_MISMATCH'})
+        self.assertEqual(set(projection['unresolved_issue_codes']), {
+            'HUMAN_NECESSITY_BASIS_MISSING',
+            'NO_FEASIBLE_SURFACE_AVAILABLE',
+            'REQUIRED_CAPABILITY_UNAVAILABLE',
+        })
+        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+        for code in projection['failure_codes'] + projection['unresolved_issue_codes']:
+            self.assertIn(code, readme)
+
+    def test_pcbw_r07_invalid_and_unsubstantiated_human_necessity_fail(self):
+        cases = (
+            (known('UNRECOGNIZED_HUMAN_NECESSITY'),
+             human_return_responsibility(kind='DIRECT_ENGINEERING_RESULT')),
+            (known('HUMAN_RISK_CONTROL_REQUIRED'),
+             human_return_responsibility(kind='ACK_ONLY')),
+            (known('HUMAN_RISK_CONTROL_REQUIRED'), {'state': 'UNKNOWN'}),
+            ({'state': 'NOT_REQUIRED'}, human_return_responsibility(kind='RAW_OUTPUT_ONLY')),
+        )
+        for basis, responsibility in cases:
+            with self.subTest(basis=basis, responsibility=responsibility):
+                request = self.humanize(self.make('run_command'), None)
+                action = request['required_actions'][0]
+                action['human_necessity_basis'] = basis
+                bind_human_return(request, action, responsibility)
+                self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                                   'INVALID_HUMAN_DELEGATION')
+
+    def test_pcbw_r07_simpler_or_safer_cannot_mask_ack_or_raw_return_contract(self):
+        for return_kind in ('ACK_ONLY', 'RAW_OUTPUT_ONLY'):
+            with self.subTest(return_kind=return_kind):
+                request = self.humanize(
+                    self.make('run_command'), 'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+                bind_human_return(
+                    request, request['required_actions'][0],
+                    human_return_responsibility(kind=return_kind))
+                envelope = engine.evaluate(request, self.profile)
+                self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+                self.assertNotIn(
+                    'HUMAN_NECESSITY_BASIS_MISSING', self.codes(envelope))
+
+        request = self.humanize(
+            self.make('run_command'), 'HUMAN_EXECUTION_SIMPLER_OR_SAFER')
+        request['return_contract']['value']['human_action_returns'][0][
+            'responsibility_kind'] = 'ACK_ONLY'
+        self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
+                           'INVALID_HUMAN_DELEGATION')
+
+    def test_framework_lab_project_emission_contract_is_fail_closed(self):
+        contract = load_json(
+            ROOT / 'project-integration/framework-lab.reusable-directive-emission.v0.1.0.json')
+        self.assertEqual(contract['project'], 'AI-Native Engineering Framework Lab')
+        boundary = contract['enforcement_boundary']
+        self.assertEqual(boundary, {
+            'repository_validator': 'EXECUTABLE',
+            'project_instruction_obligation': 'DEFINED',
+            'chatgpt_native_interceptor': False,
+            'external_project_synchronization': 'REQUIRED',
+        })
+        emission = contract['emission_contract']
+        self.assertEqual(
+            emission['human_terminal_default_missing_capability_fallback'],
+            'FORBIDDEN')
+        self.assertEqual(emission['missing_capability_behavior'],
+                         'PCBW_R06_TARGETED_RE_EVALUATION')
+        self.assertEqual(emission['failure_outcome'], {
+            'directive': None, 'emission_outcome': 'BLOCKED'})
+        self.assertEqual(emission['before_emission'], [
+            'DETERMINE_REQUIRED_ACTION',
+            'DETERMINE_REQUIRED_CAPABILITY',
+            'EXPLICITLY_EVALUATE_HUMAN_NECESSITY',
+            'REJECT_DETERMINISTIC_HUMAN_COMMAND_RELAY',
+            'APPLY_PCBW_R06_TARGETED_RE_EVALUATION_WHEN_CURRENT_SURFACE_IS_INSUFFICIENT',
+            'RETURN_SUITABLE_AUTHORIZED_AI_CANDIDATES_WITHOUT_SELECTING_OR_AUTHORIZING_THEM',
+            'VALIDATE_PCBW_R07_CONFORMANCE',
+            'EMIT_ONLY_AFTER_ROUTING_RESULT_AND_DIRECTIVE_VALIDATION_PASS',
+        ])
+
+    def test_pcbw_r07_valid_human_responsibility_bindings(self):
+        cases = (
+            ('HUMAN_AUTHORITY_REQUIRED', 'DECISION_OR_APPROVAL'),
+            ('HUMAN_RISK_CONTROL_REQUIRED', 'BLAST_RADIUS_CONTROL'),
+            ('HUMAN_LEARNING_OBJECTIVE', 'LEARNING_OUTCOME'),
+            ('DIRECT_HUMAN_OBSERVATION_OBJECTIVE', 'DIRECT_OBSERVATION'),
+        )
+        for basis, return_kind in cases:
+            with self.subTest(basis=basis, return_kind=return_kind):
+                request = self.humanize(self.make('run_command'), basis)
+                bind_human_return(
+                    request, request['required_actions'][0],
+                    human_return_responsibility(basis, return_kind))
+                envelope = engine.evaluate(request, self.profile)
+                self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+                responsibility = directive.human_execution_responsibilities(
+                    envelope['result']['execution_plan'], self.profile)[0]
+                self.assertEqual(
+                    responsibility['Human Return Responsibility']['value']['kind'],
+                    return_kind)
+                self.assertEqual(
+                    responsibility['Trusted Human Responsibility Source']['source'][
+                        'human_necessity_basis'], basis)
+                self.assertEqual(responsibility['Human Decision Required']['state'], 'KNOWN')
+
+    def test_pcbw_r07_no_suitable_ai_allows_raw_output_human_execution(self):
+        profile = copy.deepcopy(self.profile)
+        next(surface for surface in profile['surfaces']
+             if surface['id'] == 'codex')['available'] = known(False)
+        request = self.humanize(
+            self.make('run_command'), 'NO_SUITABLE_AUTHORIZED_AI_SURFACE', known(True))
+        bind_human_return(
+            request, request['required_actions'][0],
+            human_return_responsibility(
+                'NO_SUITABLE_AUTHORIZED_AI_SURFACE', 'RAW_OUTPUT_ONLY'))
+        envelope = engine.evaluate(request, profile)
+        self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+        responsibilities = directive.human_execution_responsibilities(
+            envelope['result']['execution_plan'], profile)
+        self.assertEqual(responsibilities[0]['Human Decision Required'],
+                         {'state': 'NOT_REQUIRED'})
+
     def test_pcbw_r07_preserves_legitimate_human_direct_engineering(self):
         bases = (
             'HUMAN_AUTHORITY_REQUIRED',
@@ -272,6 +564,33 @@ class RoutingTests(unittest.TestCase):
         self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
                            'HUMAN_FACING_SEMANTICS_INSUFFICIENT')
 
+    def test_pcbw_r07_human_necessity_states_remain_distinct(self):
+        unknown = self.humanize(self.make('run_command'), None)
+        unknown_envelope = engine.evaluate(unknown, self.profile)
+        self.assertBlocked(unknown_envelope, 'UNRESOLVED',
+                           'HUMAN_NECESSITY_BASIS_MISSING')
+
+        missing = self.humanize(self.make('run_command'),
+                                'HUMAN_AUTHORITY_REQUIRED')
+        del missing['required_actions'][0]['human_necessity_basis']
+        missing_envelope = engine.evaluate(missing, self.profile)
+        self.assertBlocked(missing_envelope, 'UNRESOLVED',
+                           'HUMAN_NECESSITY_BASIS_MISSING')
+
+        not_required = self.humanize(self.make('run_command'),
+                                     'HUMAN_AUTHORITY_REQUIRED')
+        not_required['required_actions'][0]['human_necessity_basis'] = nr()
+        not_required_envelope = engine.evaluate(not_required, self.profile)
+        self.assertBlocked(not_required_envelope, 'FAIL',
+                           'INVALID_HUMAN_DELEGATION')
+        self.assertNotIn('HUMAN_NECESSITY_BASIS_MISSING',
+                         self.codes(not_required_envelope))
+
+        valid = self.humanize(self.make('run_command'),
+                              'HUMAN_AUTHORITY_REQUIRED')
+        valid_envelope = engine.evaluate(valid, self.profile)
+        self.assertEqual(valid_envelope['routing_status'], 'PASS', valid_envelope)
+
         request = self.humanize(self.make('run_command'), 'HUMAN_RISK_CONTROL_REQUIRED')
         del request['required_actions'][0]['human_facing_semantics']
         self.assertBlocked(engine.evaluate(request, self.profile), 'FAIL',
@@ -289,7 +608,7 @@ class RoutingTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 request = self.make(kind)
                 for field in ('human_necessity_basis', 'targeted_re_evaluation_established',
-                              'human_facing_semantics'):
+                              'human_return_responsibility', 'human_facing_semantics'):
                     del request['required_actions'][0][field]
                 self.assertEqual(engine.evaluate(request, self.profile)['routing_status'], 'PASS')
 
@@ -541,6 +860,13 @@ class RoutingTests(unittest.TestCase):
             lambda profile: profile['operational_interfaces'][0][
                 'capability_ids'].append('missing-capability'),
             lambda profile: profile['actions'][0]['human_handoff'].update(goal='ACTION-07'),
+            lambda profile: profile['trusted_human_responsibilities'][0][
+                'action_kinds'].append('missing-action'),
+            lambda profile: profile['trusted_human_responsibilities'].append(dict(
+                profile['trusted_human_responsibilities'][0],
+                id='framework-lab:duplicate-human-authority')),
+            lambda profile: profile['trusted_human_responsibilities'][4].update(
+                required_request_owners=[]),
         )
         for mutate in mutations:
             with self.subTest(mutate=mutate):
@@ -559,7 +885,9 @@ class RoutingTests(unittest.TestCase):
         base = engine.evaluate(self.request, self.profile)['result']
         changes = {'objective': known('Changed objective'), 'target': known('Changed target'),
                    'destination_session_role': known('New role'), 'prohibited_actions': known(['new prohibition']),
-                   'verification_contract': known(['Changed check']), 'return_contract': known('Different destination')}
+                   'verification_contract': known(['Changed check']),
+                   'return_contract': known({
+                       'destination': 'Different destination', 'human_action_returns': []})}
         for field, value in changes.items():
             with self.subTest(field=field):
                 request = copy.deepcopy(self.request)
@@ -834,7 +1162,7 @@ class RoutingTests(unittest.TestCase):
     def test_review64_h_cli_has_no_executable_directive(self):
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-h.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.3.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.4.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertBlocked(json.loads(response.stdout), 'FAIL', 'SURFACE_EFFECT_MISMATCH')
 
@@ -863,7 +1191,7 @@ class RoutingTests(unittest.TestCase):
         # The exact singleton diagnostic also excludes surface mismatch, explicit denial and unknown authority.
         response = subprocess.run([sys.executable, str(ROOT/'src/cli.py'), 'route',
             '--request', str(ROOT/'tests/fixtures/regression-i.request.json'),
-            '--profile', str(ROOT/'profiles/framework-lab.v0.3.0.json')], capture_output=True, text=True)
+            '--profile', str(ROOT/'profiles/framework-lab.v0.4.0.json')], capture_output=True, text=True)
         self.assertEqual(response.returncode, 1)
         self.assertEqual(json.loads(response.stdout), envelope)
 

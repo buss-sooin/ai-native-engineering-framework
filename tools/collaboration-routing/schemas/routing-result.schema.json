@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:routing-result:1.3",
+  "$id": "urn:collaboration-routing:routing-result:1.7",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.3"
+        "1.7"
       ]
     },
     "routing_result_id": {
@@ -697,14 +697,91 @@
                           ]
                         },
                         "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
                           "enum": [
-                            "HUMAN_AUTHORITY_REQUIRED",
-                            "DIRECT_HUMAN_OBSERVATION_OBJECTIVE",
-                            "HUMAN_RISK_CONTROL_REQUIRED",
-                            "HUMAN_LEARNING_OBJECTIVE",
-                            "HUMAN_EXECUTION_SIMPLER_OR_SAFER",
-                            "NO_SUITABLE_AUTHORIZED_AI_SURFACE"
+                            "UNKNOWN"
                           ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "NOT_REQUIRED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "human_return_responsibility": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "KNOWN"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "DECISION_OR_APPROVAL",
+                                "RISK_CONTROL_DECISION",
+                                "BLAST_RADIUS_CONTROL",
+                                "DIRECT_OBSERVATION",
+                                "LEARNING_OUTCOME",
+                                "DIRECT_ENGINEERING_RESULT",
+                                "ACK_ONLY",
+                                "RAW_OUTPUT_ONLY"
+                              ]
+                            },
+                            "description": {
+                              "type": "string",
+                              "minLength": 12
+                            },
+                            "source_references": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "minItems": 1,
+                              "uniqueItems": true
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "description",
+                            "source_references"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -880,7 +957,7 @@
                                         },
                                         "decision_criterion_reference": {
                                           "enum": [
-                                            "ACTION_VERIFICATION_REQUIREMENT"
+                                            "ACTION_HUMAN_RETURN_RESPONSIBILITY"
                                           ]
                                         },
                                         "interpretation_reference": {
@@ -1773,8 +1850,49 @@
               ]
             },
             "value": {
-              "type": "string",
-              "minLength": 1
+              "type": "object",
+              "properties": {
+                "destination": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "human_action_returns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "action_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "responsibility_kind": {
+                        "enum": [
+                          "DECISION_OR_APPROVAL",
+                          "RISK_CONTROL_DECISION",
+                          "BLAST_RADIUS_CONTROL",
+                          "DIRECT_OBSERVATION",
+                          "LEARNING_OUTCOME",
+                          "DIRECT_ENGINEERING_RESULT",
+                          "ACK_ONLY",
+                          "RAW_OUTPUT_ONLY"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "action_id",
+                      "responsibility_kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "destination",
+                "human_action_returns"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -1879,7 +1997,7 @@
     },
     "validator_version": {
       "enum": [
-        "0.4.0"
+        "0.8.0"
       ]
     },
     "failure_codes": {
@@ -1922,6 +2040,7 @@
           "kind": {
             "enum": [
               "INPUT_COMPLETION",
+              "TARGETED_RE_EVALUATION",
               "ENVIRONMENT_RESOLUTION",
               "HUMAN_RESOLUTION",
               "HUMAN_GATE",
@@ -1953,18 +2072,159 @@
       "minItems": 0,
       "uniqueItems": true
     },
+    "targeted_re_evaluation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule": {
+            "enum": [
+              "PCBW-R06"
+            ]
+          },
+          "status": {
+            "enum": [
+              "TARGETED_RE_EVALUATION"
+            ]
+          },
+          "cause": {
+            "enum": [
+              "INVALID_HUMAN_DELEGATION"
+            ]
+          },
+          "rejected_surface": {
+            "type": "object",
+            "properties": {
+              "surface_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "surface_label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actor": {
+                "enum": [
+                  "HUMAN"
+                ]
+              }
+            },
+            "required": [
+              "surface_id",
+              "surface_label",
+              "actor"
+            ],
+            "additionalProperties": false
+          },
+          "candidate_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "surface_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "surface_label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "actor": {
+                  "enum": [
+                    "AI"
+                  ]
+                },
+                "authority_status": {
+                  "enum": [
+                    "AUTHORIZED",
+                    "NOT_REQUIRED"
+                  ]
+                },
+                "selection_status": {
+                  "enum": [
+                    "REEVALUATION_CANDIDATE"
+                  ]
+                },
+                "model_recommendation": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reasoning_recommendation": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "READ_ONLY",
+                      "ARTIFACT_WRITE",
+                      "REPOSITORY_MUTATION",
+                      "COMMAND_EXECUTION",
+                      "RUNTIME_OBSERVATION",
+                      "RUNTIME_MUTATION",
+                      "EXTERNAL_SIDE_EFFECT"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "surface_id",
+                "surface_label",
+                "actor",
+                "authority_status",
+                "selection_status",
+                "model_recommendation",
+                "reasoning_recommendation",
+                "capabilities",
+                "effects"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "action_id",
+          "rule",
+          "status",
+          "cause",
+          "rejected_surface",
+          "candidate_surfaces"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
     "semantic_fingerprint": {
       "type": "string",
       "minLength": 1
     },
     "source_request": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "urn:collaboration-routing:routing-request:1.3",
+      "$id": "urn:collaboration-routing:routing-request:1.5",
       "type": "object",
       "properties": {
         "schema_version": {
           "enum": [
-            "1.3"
+            "1.5"
           ]
         },
         "request_id": {
@@ -2812,14 +3072,91 @@
                         ]
                       },
                       "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
                         "enum": [
-                          "HUMAN_AUTHORITY_REQUIRED",
-                          "DIRECT_HUMAN_OBSERVATION_OBJECTIVE",
-                          "HUMAN_RISK_CONTROL_REQUIRED",
-                          "HUMAN_LEARNING_OBJECTIVE",
-                          "HUMAN_EXECUTION_SIMPLER_OR_SAFER",
-                          "NO_SUITABLE_AUTHORIZED_AI_SURFACE"
+                          "UNKNOWN"
                         ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "NOT_REQUIRED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "human_return_responsibility": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "enum": [
+                          "KNOWN"
+                        ]
+                      },
+                      "value": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "DECISION_OR_APPROVAL",
+                              "RISK_CONTROL_DECISION",
+                              "BLAST_RADIUS_CONTROL",
+                              "DIRECT_OBSERVATION",
+                              "LEARNING_OUTCOME",
+                              "DIRECT_ENGINEERING_RESULT",
+                              "ACK_ONLY",
+                              "RAW_OUTPUT_ONLY"
+                            ]
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 12
+                          },
+                          "source_references": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "minItems": 1,
+                            "uniqueItems": true
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "description",
+                          "source_references"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
@@ -2995,7 +3332,7 @@
                                       },
                                       "decision_criterion_reference": {
                                         "enum": [
-                                          "ACTION_VERIFICATION_REQUIREMENT"
+                                          "ACTION_HUMAN_RETURN_RESPONSIBILITY"
                                         ]
                                       },
                                       "interpretation_reference": {
@@ -3713,8 +4050,49 @@
                   ]
                 },
                 "value": {
-                  "type": "string",
-                  "minLength": 1
+                  "type": "object",
+                  "properties": {
+                    "destination": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "human_action_returns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "action_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "responsibility_kind": {
+                            "enum": [
+                              "DECISION_OR_APPROVAL",
+                              "RISK_CONTROL_DECISION",
+                              "BLAST_RADIUS_CONTROL",
+                              "DIRECT_OBSERVATION",
+                              "LEARNING_OUTCOME",
+                              "DIRECT_ENGINEERING_RESULT",
+                              "ACK_ONLY",
+                              "RAW_OUTPUT_ONLY"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "action_id",
+                          "responsibility_kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "destination",
+                    "human_action_returns"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -3945,12 +4323,12 @@
     },
     "source_profile": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "urn:collaboration-routing:project-routing-profile:1.2",
+      "$id": "urn:collaboration-routing:project-routing-profile:1.4",
       "type": "object",
       "properties": {
         "schema_version": {
           "enum": [
-            "1.2"
+            "1.4"
           ]
         },
         "id": {
@@ -4058,6 +4436,105 @@
               "authority_required",
               "preferred_surfaces",
               "human_handoff"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "trusted_human_responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "human_necessity_basis": {
+                "enum": [
+                  "HUMAN_AUTHORITY_REQUIRED",
+                  "DIRECT_HUMAN_OBSERVATION_OBJECTIVE",
+                  "HUMAN_RISK_CONTROL_REQUIRED",
+                  "HUMAN_LEARNING_OBJECTIVE",
+                  "HUMAN_EXECUTION_SIMPLER_OR_SAFER",
+                  "NO_SUITABLE_AUTHORIZED_AI_SURFACE"
+                ]
+              },
+              "return_responsibility_kinds": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "DECISION_OR_APPROVAL",
+                    "RISK_CONTROL_DECISION",
+                    "BLAST_RADIUS_CONTROL",
+                    "DIRECT_OBSERVATION",
+                    "LEARNING_OUTCOME",
+                    "DIRECT_ENGINEERING_RESULT",
+                    "ACK_ONLY",
+                    "RAW_OUTPUT_ONLY"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "action_kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "human_role": {
+                "enum": [
+                  "AUTHORITY_DECISION",
+                  "RISK_CONTROL",
+                  "DIRECT_OBSERVER",
+                  "LEARNER",
+                  "DIRECT_ENGINEER",
+                  "EXECUTION_ONLY_WHEN_NO_AI_SURFACE"
+                ]
+              },
+              "required_session_role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required_request_owners": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "request_field": {
+                      "enum": [
+                        "decision_owner",
+                        "verification_owner"
+                      ]
+                    },
+                    "required_owner": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "request_field",
+                    "required_owner"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "human_necessity_basis",
+              "return_responsibility_kinds",
+              "action_kinds",
+              "human_role",
+              "required_session_role",
+              "required_request_owners"
             ],
             "additionalProperties": false
           },
@@ -4232,6 +4709,7 @@
         "version",
         "project",
         "actions",
+        "trusted_human_responsibilities",
         "surfaces",
         "operational_interfaces"
       ],
@@ -4263,6 +4741,7 @@
     "failure_codes",
     "unresolved_issues",
     "resolution_action",
+    "targeted_re_evaluation",
     "semantic_fingerprint",
     "source_request",
     "source_profile"

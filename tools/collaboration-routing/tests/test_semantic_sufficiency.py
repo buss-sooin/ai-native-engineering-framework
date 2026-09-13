@@ -24,7 +24,7 @@ def nr():
     return {'state': 'NOT_REQUIRED'}
 
 
-PROFILE = load_json(ROOT / 'profiles/framework-lab.v0.3.0.json')
+PROFILE = load_json(ROOT / 'profiles/framework-lab.v0.4.0.json')
 
 
 def context(kind='run_command', capabilities=None):
@@ -35,6 +35,12 @@ def context(kind='run_command', capabilities=None):
         'action_target': known('repository at an explicitly supplied revision'),
         'capabilities': capabilities or ['command_execution'],
         'verification_requirement': known(['Inspect repository runtime evidence.']),
+        'human_necessity_basis': known('HUMAN_AUTHORITY_REQUIRED'),
+        'human_return_responsibility': known({
+            'kind': 'DECISION_OR_APPROVAL',
+            'description': 'Approve or reject execution using the action-specific evidence and authority.',
+            'source_references': ['framework-lab:human-authority'],
+        }),
         'selected_surface_id': 'human-terminal',
     }
 
@@ -50,7 +56,7 @@ def structured(interface_id='human-terminal', source='SELECTED_EXECUTION_SURFACE
             'capability_ids': ['command_execution'],
             'verification_reference': 'ACTION_VERIFICATION_REQUIREMENT',
         },
-        'decision_criterion_reference': 'ACTION_VERIFICATION_REQUIREMENT',
+        'decision_criterion_reference': 'ACTION_HUMAN_RETURN_RESPONSIBILITY',
         'interpretation_reference': 'PROFILE_ACTION_HUMAN_HANDOFF',
         'cli_fallback': (known({'source': 'PROFILE_OPERATIONAL_INTERFACE', 'id': fallback})
                          if fallback else nr()),
@@ -140,6 +146,7 @@ class SemanticSufficiencyTests(unittest.TestCase):
             'id': 'a0', 'target': context()['action_target'],
             'verification_requirement': context()['verification_requirement'],
             'human_necessity_basis': known('HUMAN_AUTHORITY_REQUIRED'),
+            'human_return_responsibility': context()['human_return_responsibility'],
             'human_facing_semantics': semantics(note='banana'),
         }
         step = {'kind': 'run_command', 'surface_id': 'human-terminal',

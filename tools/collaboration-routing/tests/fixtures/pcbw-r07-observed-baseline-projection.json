@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "id": "pcbw-r07-observed-baseline-projection",
+  "baseline_revision": "cf32486bba42eeaeae6165538405d8ffd67d83f4",
+  "request_schema_version": "1.3",
+  "profile_version": "0.3.0",
+  "projection": "FAITHFUL_OBSERVED_FIXTURE_WITH_ARTIFACT_WRITE",
+  "effects": [
+    "COMMAND_EXECUTION",
+    "ARTIFACT_WRITE"
+  ],
+  "routing_status": "FAIL",
+  "failure_codes": [
+    "HEADER_BODY_MISMATCH",
+    "SURFACE_EFFECT_MISMATCH"
+  ],
+  "unresolved_issue_codes": [
+    "HUMAN_NECESSITY_BASIS_MISSING",
+    "NO_FEASIBLE_SURFACE_AVAILABLE",
+    "REQUIRED_CAPABILITY_UNAVAILABLE"
+  ],
+  "directive": null
+}

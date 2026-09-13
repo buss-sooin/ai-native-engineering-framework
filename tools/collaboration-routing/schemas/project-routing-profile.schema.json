@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:project-routing-profile:1.2",
+  "$id": "urn:collaboration-routing:project-routing-profile:1.4",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.2"
+        "1.4"
       ]
     },
     "id": {
@@ -113,6 +113,105 @@
           "authority_required",
           "preferred_surfaces",
           "human_handoff"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "trusted_human_responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "human_necessity_basis": {
+            "enum": [
+              "HUMAN_AUTHORITY_REQUIRED",
+              "DIRECT_HUMAN_OBSERVATION_OBJECTIVE",
+              "HUMAN_RISK_CONTROL_REQUIRED",
+              "HUMAN_LEARNING_OBJECTIVE",
+              "HUMAN_EXECUTION_SIMPLER_OR_SAFER",
+              "NO_SUITABLE_AUTHORIZED_AI_SURFACE"
+            ]
+          },
+          "return_responsibility_kinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "DECISION_OR_APPROVAL",
+                "RISK_CONTROL_DECISION",
+                "BLAST_RADIUS_CONTROL",
+                "DIRECT_OBSERVATION",
+                "LEARNING_OUTCOME",
+                "DIRECT_ENGINEERING_RESULT",
+                "ACK_ONLY",
+                "RAW_OUTPUT_ONLY"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "action_kinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "human_role": {
+            "enum": [
+              "AUTHORITY_DECISION",
+              "RISK_CONTROL",
+              "DIRECT_OBSERVER",
+              "LEARNER",
+              "DIRECT_ENGINEER",
+              "EXECUTION_ONLY_WHEN_NO_AI_SURFACE"
+            ]
+          },
+          "required_session_role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required_request_owners": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request_field": {
+                  "enum": [
+                    "decision_owner",
+                    "verification_owner"
+                  ]
+                },
+                "required_owner": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "request_field",
+                "required_owner"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "human_necessity_basis",
+          "return_responsibility_kinds",
+          "action_kinds",
+          "human_role",
+          "required_session_role",
+          "required_request_owners"
         ],
         "additionalProperties": false
       },
@@ -287,6 +386,7 @@
     "version",
     "project",
     "actions",
+    "trusted_human_responsibilities",
     "surfaces",
     "operational_interfaces"
   ],

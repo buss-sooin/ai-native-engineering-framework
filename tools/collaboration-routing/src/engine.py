@@ -6,21 +6,34 @@ import time
 
 from schema_validation import InvalidDocument, canonical, validate
 from semantic_sufficiency import (
+    COMMAND_RELAY_RESPONSIBILITIES,
     HUMAN_NECESSITY_BASES,
     human_facing_semantics_issues,
+    human_return_responsibility_issues,
     is_human_usable_description,
 )
 
-VERSION = '0.4.0'
+VERSION = '0.8.0'
+
+HUMAN_ROLE_REQUIRED_OWNER_FIELDS = {
+    'AUTHORITY_DECISION': {'decision_owner'},
+    'RISK_CONTROL': {'decision_owner'},
+    'DIRECT_OBSERVER': {'verification_owner'},
+    'LEARNER': {'decision_owner'},
+    'DIRECT_ENGINEER': {'decision_owner', 'verification_owner'},
+    'EXECUTION_ONLY_WHEN_NO_AI_SURFACE': set(),
+}
 
 RESOLUTIONS = {
     'INPUT_COMPLETION': ('REQUIRED_INPUT_UNKNOWN', 'REQUIRED_CAPABILITY_UNKNOWN', 'ROUTING_CONTRACT_CONTRADICTION',
                          'HUMAN_NECESSITY_BASIS_MISSING'),
+    'TARGETED_RE_EVALUATION': ('INVALID_HUMAN_DELEGATION',),
     'ENVIRONMENT_RESOLUTION': ('REQUIRED_CAPABILITY_UNAVAILABLE', 'NO_FEASIBLE_SURFACE_AVAILABLE',
+                               'NO_AUTHORIZED_SURFACE',
                                'PROFILE_VERSION_UNAVAILABLE', 'SURFACE_CAPABILITY_MISMATCH', 'SURFACE_EFFECT_MISMATCH'),
     'HUMAN_RESOLUTION': ('CANONICAL_CONFLICT', 'AMBIGUOUS_SURFACE_SELECTION', 'AUTHORITY_UNKNOWN',
                          'AUTHORITY_DENIED', 'PROHIBITED_ACTION', 'SURFACE_RESPONSIBILITY_MISMATCH',
-                         'INVALID_HUMAN_DELEGATION', 'HUMAN_FACING_SEMANTICS_INSUFFICIENT',
+                         'HUMAN_FACING_SEMANTICS_INSUFFICIENT',
                          'TARGETED_RE_EVALUATION_NOT_ESTABLISHED',
                          'NO_SUITABLE_AI_SURFACE_CONTRADICTION'),
     'HUMAN_GATE': ('AUTHORITY_REQUIRED', 'BOUNDARY_TARGET_INSUFFICIENT',
@@ -31,6 +44,7 @@ RESOLUTIONS = {
 
 RESOLUTION_INSTRUCTIONS = {
     'INPUT_COMPLETION': 'Complete or correct structured input, then revalidate.',
+    'TARGETED_RE_EVALUATION': 'Run PCBW-R06 targeted re-evaluation for the affected action using the returned suitable AI candidates; do not rewrite or emit the rejected Human directive.',
     'ENVIRONMENT_RESOLUTION': 'Resolve profile, availability or capability/effect fit, then revalidate; do not lower requirements.',
     'HUMAN_RESOLUTION': 'Return the conflict or authority question to the responsible human; do not assume new permission.',
     'HUMAN_GATE': 'Obtain human approval covering the requested target, action and effects, or narrow the request to the approved boundary, then revalidate. Do not infer approval or override an explicit denial.',
@@ -79,6 +93,7 @@ def validate_profile(profile):
     unique_ids(profile['surfaces'], 'label')
     unique_ids(profile['operational_interfaces'], 'id')
     unique_ids(profile['operational_interfaces'], 'display_name')
+    unique_ids(profile['trusted_human_responsibilities'], 'id')
     surface_ids = {s['id'] for s in profile['surfaces']}
     surfaces = {s['id']: s for s in profile['surfaces']}
     known_capabilities = {
@@ -95,6 +110,23 @@ def validate_profile(profile):
         if any(not is_human_usable_description(action['human_handoff'][field])
                for field in ('goal', 'observation', 'decision', 'expected_interpretation')):
             raise InvalidDocument('action human handoff must contain usable trusted descriptions')
+    trusted_bindings = set()
+    action_kinds = {action['kind'] for action in profile['actions']}
+    for source in profile['trusted_human_responsibilities']:
+        if set(source['action_kinds']) - action_kinds:
+            raise InvalidDocument('trusted Human responsibility action does not exist')
+        owner_fields = [owner['request_field']
+                        for owner in source['required_request_owners']]
+        if len(owner_fields) != len(set(owner_fields)):
+            raise InvalidDocument('duplicate trusted Human responsibility owner binding')
+        if set(owner_fields) != HUMAN_ROLE_REQUIRED_OWNER_FIELDS[source['human_role']]:
+            raise InvalidDocument('trusted Human responsibility owner binding is incomplete')
+        for action_kind in source['action_kinds']:
+            for return_kind in source['return_responsibility_kinds']:
+                binding = (action_kind, source['human_necessity_basis'], return_kind)
+                if binding in trusted_bindings:
+                    raise InvalidDocument('duplicate trusted Human responsibility binding')
+                trusted_bindings.add(binding)
     for surface in profile['surfaces']:
         if surface['available']['state'] == 'NOT_REQUIRED':
             raise InvalidDocument('surface availability cannot be NOT_REQUIRED')
@@ -119,6 +151,7 @@ def validate_internal_conformance(result):
     surfaces = {s['id']: s for s in profile['surfaces']}
     plan = result['execution_plan']
     valid = not result['failure_codes'] and not result['unresolved_issues']
+    valid = valid and not result['targeted_re_evaluation']
     valid = valid and len(plan) == len(required) and {s['action_id'] for s in plan} == set(required)
     for step in plan:
         action = required[step['action_id']]
@@ -148,8 +181,12 @@ def validate_internal_conformance(result):
         valid = valid and (not (definition['authority_required'] or effects != {'READ_ONLY'}) or action['authority'] == 'AUTHORIZED')
         if step['actor'] == 'HUMAN':
             basis = action.get('human_necessity_basis', {'state': 'UNKNOWN'})
+            human_return = action.get('human_return_responsibility', {'state': 'UNKNOWN'})
             semantics = action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
             valid = valid and basis['state'] == 'KNOWN' and basis.get('value') in HUMAN_NECESSITY_BASES
+            valid = valid and not human_return_responsibility_issues(
+                human_return, basis.get('value'), profile, step['kind'],
+                request['responsibility'], action['session_role'])
             valid = valid and not human_facing_semantics_issues(semantics, {
                 'profile': profile,
                 'action_id': action['id'],
@@ -157,6 +194,8 @@ def validate_internal_conformance(result):
                 'action_target': action['target'],
                 'capabilities': step['required_capabilities'],
                 'verification_requirement': action['verification_requirement'],
+                'human_necessity_basis': basis,
+                'human_return_responsibility': human_return,
                 'selected_surface_id': step['surface_id'],
                 'selected_surface_label': step['surface_label'],
                 'verification_contract': result['verification_contract'],
@@ -172,6 +211,7 @@ def validate_internal_conformance(result):
                     for candidate in surfaces.values())
         else:
             valid = valid and action.get('human_necessity_basis', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
+            valid = valid and action.get('human_return_responsibility', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
             valid = valid and action.get('targeted_re_evaluation_established', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
             valid = valid and action.get('human_facing_semantics', {'state': 'NOT_REQUIRED'}) == {'state': 'NOT_REQUIRED'}
     valid = valid and result['semantic_fingerprint'] == fingerprint(result)
@@ -207,8 +247,9 @@ def _evaluate(request, profile, deadline):
     deadline.check()
     for name in ('project', 'title', 'objective', 'destination_session_role', 'target',
                  'current_state', 'current_gate', 'canonical_authority',
-                 'prohibited_actions', 'verification_contract', 'return_contract'):
+                 'prohibited_actions', 'verification_contract'):
         needed(request[name], name)
+    return_contract = needed(request['return_contract'], 'return_contract')
     for name in ('stop_conditions', 'evidence_requirement', 'branch_revision_environment'):
         needed(request[name], name, optional=True)
     for name in ('decision_owner', 'verification_owner'):
@@ -225,6 +266,15 @@ def _evaluate(request, profile, deadline):
     actions = {a['kind']: a for a in profile['actions']}
     surfaces = {s['id']: s for s in profile['surfaces']}
     ids = {a['id'] for a in request['required_actions']}
+    return_by_action = {}
+    if return_contract is not None:
+        unique_ids(return_contract['human_action_returns'], 'action_id')
+        return_by_action = {
+            item['action_id']: item['responsibility_kind']
+            for item in return_contract['human_action_returns']
+        }
+        if set(return_by_action) - ids:
+            fail('ROUTING_CONTRACT_CONTRADICTION')
     selection = needed(request['surface_selection'], 'surface_selection', optional=True)
     selected = {}
     if selection is not None:
@@ -240,7 +290,7 @@ def _evaluate(request, profile, deadline):
         if set(boundary['allowed_action_ids']) - ids:
             fail('ROUTING_CONTRACT_CONTRADICTION')
     prohibited = request['prohibited_actions'].get('value', [])
-    capabilities, feasible, plan, rejected, assessments = set(), [], [], [], []
+    capabilities, feasible, plan, rejected, assessments, reevaluations = set(), [], [], [], [], []
     for required in request['required_actions']:
         deadline.check()
         aid = required['id']
@@ -339,10 +389,71 @@ def _evaluate(request, profile, deadline):
         reevaluation_field = required.get('targeted_re_evaluation_established',
                                           {'state': 'UNKNOWN'} if actor == 'HUMAN' else {'state': 'NOT_REQUIRED'})
         semantics_field = required.get('human_facing_semantics', {'state': 'NOT_REQUIRED'})
+        return_responsibility_field = required.get(
+            'human_return_responsibility',
+            {'state': 'UNKNOWN'} if actor == 'HUMAN' else {'state': 'NOT_REQUIRED'})
         if actor == 'HUMAN':
-            basis = basis_field.get('value') if basis_field['state'] == 'KNOWN' else None
-            if basis is None:
+            basis_state = basis_field.get('state')
+            basis = basis_field.get('value') if basis_state == 'KNOWN' else None
+            responsibility_issues = human_return_responsibility_issues(
+                return_responsibility_field, basis, profile, kind,
+                request['responsibility'], required['session_role'])
+            return_kind = (return_responsibility_field.get('value', {}).get('kind')
+                           if return_responsibility_field.get('state') == 'KNOWN' else None)
+            contract_return_kind = return_by_action.get(aid)
+            if contract_return_kind != return_kind:
+                responsibility_issues += ('return_contract.human_action_returns',)
+            basis_unknown = basis_state == 'UNKNOWN'
+            basis_absent = basis_state == 'NOT_REQUIRED'
+            basis_invalid = basis_state == 'KNOWN' and basis not in HUMAN_NECESSITY_BASES
+            command_relay = (return_kind in COMMAND_RELAY_RESPONSIBILITIES
+                             or contract_return_kind in COMMAND_RELAY_RESPONSIBILITIES)
+            substantive_invalid = basis_absent or basis_invalid or bool(responsibility_issues)
+            contradicted_no_ai_basis = (
+                basis == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE'
+                and reevaluation_field == {'state': 'KNOWN', 'value': True})
+            invalid_delegation = (definition['deterministic'] and bool(suitable_ai)
+                                  and (substantive_invalid or command_relay
+                                       or contradicted_no_ai_basis))
+            if invalid_delegation:
+                fail('INVALID_HUMAN_DELEGATION')
+                rejected_sid = selected.get(aid)
+                if (rejected_sid not in surfaces
+                        or surfaces[rejected_sid]['actor'] != 'HUMAN'):
+                    preferences = [sid for sid in definition['preferred_surfaces']
+                                   if sid in surfaces and surfaces[sid]['actor'] == 'HUMAN']
+                    rejected_sid = preferences[0] if preferences else (
+                        next((sid for sid, item in surfaces.items()
+                              if item['actor'] == 'HUMAN'), None))
+                rejected_surface = surfaces.get(rejected_sid, {})
+                reevaluations.append({
+                    'action_id': aid,
+                    'rule': 'PCBW-R06',
+                    'status': 'TARGETED_RE_EVALUATION',
+                    'cause': 'INVALID_HUMAN_DELEGATION',
+                    'rejected_surface': {
+                        'surface_id': rejected_sid,
+                        'surface_label': rejected_surface.get('label'),
+                        'actor': 'HUMAN',
+                    },
+                    'candidate_surfaces': [{
+                        'surface_id': sid,
+                        'surface_label': surfaces[sid]['label'],
+                        'actor': surfaces[sid]['actor'],
+                        'authority_status': assessment['status'],
+                        'selection_status': 'REEVALUATION_CANDIDATE',
+                        'model_recommendation': surfaces[sid]['model_recommendation'],
+                        'reasoning_recommendation': surfaces[sid]['reasoning_recommendation'],
+                        'capabilities': sorted(definition['capabilities']),
+                        'effects': sorted(effects),
+                    } for sid in suitable_ai],
+                })
+            elif substantive_invalid:
+                fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
+            if basis_unknown:
                 unresolved('HUMAN_NECESSITY_BASIS_MISSING', aid)
+            elif (basis_absent or basis_invalid) and not definition['deterministic']:
+                fail('HUMAN_FACING_SEMANTICS_INSUFFICIENT')
             if basis == 'NO_SUITABLE_AUTHORIZED_AI_SURFACE':
                 if reevaluation_field != {'state': 'KNOWN', 'value': True}:
                     unresolved('TARGETED_RE_EVALUATION_NOT_ESTABLISHED', aid)
@@ -353,7 +464,10 @@ def _evaluate(request, profile, deadline):
                     unresolved('TARGETED_RE_EVALUATION_NOT_ESTABLISHED',
                                aid + ': AI surface availability is unknown')
         elif actor == 'AI':
+            if aid in return_by_action:
+                fail('ROUTING_CONTRACT_CONTRADICTION')
             for name, field in (('human_necessity_basis', basis_field),
+                                ('human_return_responsibility', return_responsibility_field),
                                 ('targeted_re_evaluation_established', reevaluation_field),
                                 ('human_facing_semantics', semantics_field)):
                 if field['state'] == 'UNKNOWN':
@@ -396,6 +510,8 @@ def _evaluate(request, profile, deadline):
                     'action_target': required.get('target'),
                     'capabilities': definition['capabilities'],
                     'verification_requirement': required.get('verification_requirement'),
+                    'human_necessity_basis': basis_field,
+                    'human_return_responsibility': return_responsibility_field,
                     'selected_surface_id': bound_surface_id,
                     'selected_surface_label': bound_surface.get('label'),
                     'verification_contract': request.get('verification_contract'),
@@ -425,7 +541,7 @@ def _evaluate(request, profile, deadline):
     chosen_ids = sorted({step['surface_id'] for step in plan})
     mode = ('COMPOSITE' if len(chosen_ids) > 1 else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
     result = {
-        'schema_version': '1.3', 'routing_result_id': 'pending', 'request_id': request['request_id'],
+        'schema_version': '1.7', 'routing_result_id': 'pending', 'request_id': request['request_id'],
         'routing_status': status, 'project': copy.deepcopy(request['project']),
         'destination_session_role': copy.deepcopy(request['destination_session_role']), 'route_mode': mode,
         'required_capabilities': sorted(capabilities), 'feasible_surfaces': feasible,
@@ -438,6 +554,7 @@ def _evaluate(request, profile, deadline):
         'routing_profile': {'id': profile['id'], 'version': profile['version']}, 'validator_version': VERSION,
         'failure_codes': sorted(failures), 'unresolved_issues': sorted(issues, key=lambda x: (x['code'], x['detail'])),
         'resolution_action': resolution_actions(failures + [i['code'] for i in issues]),
+        'targeted_re_evaluation': reevaluations,
         'semantic_fingerprint': 'pending', 'source_request': copy.deepcopy(request), 'source_profile': copy.deepcopy(profile)
     }
     for key in ('approved_execution_boundary', 'prohibited_actions', 'verification_contract', 'return_contract'):

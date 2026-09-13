@@ -5,9 +5,11 @@ human-visible projection and compares every decision-bearing value with the
 validated Routing Result.
 """
 import html
+import hashlib
 import json
 
 from engine import verify_result
+from schema_validation import canonical
 from semantic_sufficiency import (
     human_execution_projection_issues,
     resolve_human_execution_responsibility,
@@ -184,6 +186,14 @@ def validate_directive_conformance(result, text, timeout_seconds=5.0):
 
         if position != len(lines):
             return _failure('UNEXPECTED_DIRECTIVE_CONTENT', 'Directive contains content outside the validated contract.')
-        return {'status': 'PASS', 'failure_codes': [], 'detail': 'Directive conforms to the validated Routing Result.'}
+        return {
+            'status': 'PASS',
+            'failure_codes': [],
+            'detail': 'Directive conforms to the validated Routing Result.',
+            'routing_result_id': result['routing_result_id'],
+            'routing_semantic_fingerprint': result['semantic_fingerprint'],
+            'directive_fingerprint': hashlib.sha256(
+                canonical(text).encode('utf-8')).hexdigest(),
+        }
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
         return _failure('DIRECTIVE_STRUCTURE_INVALID', type(error).__name__)
