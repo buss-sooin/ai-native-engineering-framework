@@ -239,6 +239,67 @@ class RoutingTests(unittest.TestCase):
                     self.assertIn('AI Session Surface', text)
                     self.assertIn('Human Execution Surface', text)
 
+    def test_composite_mode_represents_ai_plus_valid_human_responsibility(self):
+        ai_only = engine.evaluate(
+            self.make('reason_context', 'inspect_repository'), self.profile)
+        self.assertEqual(ai_only['routing_status'], 'PASS', ai_only)
+        self.assertEqual(ai_only['result']['route_mode'], 'SINGLE')
+        self.assertEqual(
+            {step['surface_id'] for step in ai_only['result']['execution_plan']},
+            {'general-chat', 'work-mode'})
+        self.assertEqual(
+            {step['actor'] for step in ai_only['result']['execution_plan']}, {'AI'})
+
+        valid_composite = engine.evaluate(
+            self.make('observe_runtime', 'inspect_repository'), self.profile)
+        self.assertEqual(valid_composite['routing_status'], 'PASS', valid_composite)
+        self.assertEqual(valid_composite['result']['route_mode'], 'COMPOSITE')
+        human_action = next(
+            step['assigned_actions'][0]
+            for step in valid_composite['result']['execution_plan']
+            if step['actor'] == 'HUMAN')
+        self.assertEqual(
+            human_action['human_necessity_basis'],
+            known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE'))
+
+    def test_runtime_entry_composite_command_relay_regression_fails(self):
+        request = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-runtime-entry-command-relay-composite.request.json')
+        envelope = engine.evaluate(request, self.profile)
+        self.assertBlocked(envelope, 'FAIL', 'INVALID_HUMAN_DELEGATION')
+        self.assertEqual(envelope['result']['route_mode'], 'COMPOSITE')
+        self.assertEqual(
+            {step['actor'] for step in envelope['result']['execution_plan']},
+            {'AI', 'HUMAN'})
+        human_action = next(
+            step['assigned_actions'][0]
+            for step in envelope['result']['execution_plan']
+            if step['actor'] == 'HUMAN')
+        self.assertEqual(human_action['human_necessity_basis'], nr())
+        self.assertEqual(
+            human_action['human_return_responsibility']['value']['kind'],
+            'RAW_OUTPUT_ONLY')
+        reevaluation = envelope['result']['targeted_re_evaluation'][0]
+        self.assertEqual(reevaluation['rejected_surface']['surface_id'],
+                         'human-terminal')
+        self.assertEqual(
+            [candidate['surface_id'] for candidate in reevaluation['candidate_surfaces']],
+            ['codex'])
+
+    def test_route_mode_cannot_be_forged_from_surface_count_or_label(self):
+        single = engine.evaluate(self.make('run_command'), self.profile)['result']
+        single['route_mode'] = 'COMPOSITE'
+        single['semantic_fingerprint'] = engine.fingerprint(single)
+        with self.assertRaises(RuntimeError):
+            engine.validate_internal_conformance(single)
+
+        composite = engine.evaluate(
+            self.make('observe_runtime', 'inspect_repository'), self.profile)['result']
+        composite['route_mode'] = 'SINGLE'
+        composite['semantic_fingerprint'] = engine.fingerprint(composite)
+        with self.assertRaises(RuntimeError):
+            engine.validate_internal_conformance(composite)
+
     def test_pcbw_r07_blocks_deterministic_human_command_relay(self):
         cases = (
             ('deterministic preflight', 'run_tests', 'Preflight Verification Runner',
@@ -423,7 +484,7 @@ class RoutingTests(unittest.TestCase):
 
     def test_framework_lab_project_emission_contract_is_fail_closed(self):
         contract = load_json(
-            ROOT / 'project-integration/framework-lab.reusable-directive-emission.v0.1.0.json')
+            ROOT / 'project-integration/framework-lab.reusable-directive-emission.v0.2.0.json')
         self.assertEqual(contract['project'], 'AI-Native Engineering Framework Lab')
         boundary = contract['enforcement_boundary']
         self.assertEqual(boundary, {
@@ -443,13 +504,33 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(emission['before_emission'], [
             'DETERMINE_REQUIRED_ACTION',
             'DETERMINE_REQUIRED_CAPABILITY',
-            'EXPLICITLY_EVALUATE_HUMAN_NECESSITY',
+            'EXPLICITLY_EVALUATE_HUMAN_NECESSITY_PER_HUMAN_ACTION_INSTANCE',
             'REJECT_DETERMINISTIC_HUMAN_COMMAND_RELAY',
+            'REJECT_COMMAND_RELAY_DISGUISED_AS_COMPOSITE_EXECUTION',
             'APPLY_PCBW_R06_TARGETED_RE_EVALUATION_WHEN_CURRENT_SURFACE_IS_INSUFFICIENT',
             'RETURN_SUITABLE_AUTHORIZED_AI_CANDIDATES_WITHOUT_SELECTING_OR_AUTHORIZING_THEM',
             'VALIDATE_PCBW_R07_CONFORMANCE',
             'EMIT_ONLY_AFTER_ROUTING_RESULT_AND_DIRECTIVE_VALIDATION_PASS',
         ])
+        self.assertEqual(emission['human_necessity_scope'],
+                         'HUMAN_ACTION_INSTANCE')
+        self.assertTrue(emission['human_surface_requires_valid_human_necessity'])
+        self.assertEqual(set(emission['insufficient_human_necessity_claims']), {
+            'TASK_TOUCHES_RUNTIME',
+            'TASK_USES_SHELL_COMMANDS',
+            'CURRENT_SESSION_CANNOT_EXECUTE',
+            'HUMAN_HAS_TERMINAL_ACCESS',
+            'ROLE_NAME_CONTAINS_HUMAN',
+            'DIRECTIVE_SAYS_HUMAN_CONTROLLED',
+            'HUMAN_CAN_OBSERVE_RESULT',
+            'HUMAN_CAN_COPY_AI_COMMANDS',
+        })
+        self.assertEqual(emission['composite_execution'], {
+            'required_responsibility_actors': ['AI', 'HUMAN'],
+            'human_responsibility_requires_valid_human_necessity': True,
+            'ai_instruction_plus_human_deterministic_execution': (
+                'COMMAND_RELAY_NOT_COMPOSITE'),
+        })
 
     def test_pcbw_r07_valid_human_responsibility_bindings(self):
         cases = (

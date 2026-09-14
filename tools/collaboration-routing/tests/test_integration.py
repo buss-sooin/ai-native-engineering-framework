@@ -272,6 +272,39 @@ class IntegrationTests(unittest.TestCase):
             'REEVALUATION_CANDIDATE')
         self.assert_no_directive(envelope)
 
+    def test_runtime_entry_composite_command_relay_is_blocked_end_to_end(self):
+        request = load_json(
+            ROOT / 'tests/fixtures/pcbw-r07-runtime-entry-command-relay-composite.request.json')
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'BLOCKED_BY_ROUTING')
+        self.assertEqual(envelope['routing_status'], 'FAIL')
+        self.assertEqual(envelope['failure_codes'], ['INVALID_HUMAN_DELEGATION'])
+        self.assertEqual(envelope['result']['route_mode'], 'COMPOSITE')
+        self.assertEqual(
+            {step['actor'] for step in envelope['result']['execution_plan']},
+            {'AI', 'HUMAN'})
+        self.assertEqual(
+            envelope['result']['targeted_re_evaluation'][0][
+                'candidate_surfaces'][0]['surface_id'],
+            'codex')
+        self.assert_no_directive(envelope)
+
+    def test_valid_human_direct_composite_still_emits(self):
+        request = self.make('observe_runtime', 'inspect_repository')
+        envelope = integration.integrate(request, self.profile)
+        self.assertEqual(envelope['integration_status'], 'PASS', envelope)
+        self.assertEqual(envelope['routing_status'], 'PASS', envelope)
+        self.assertEqual(envelope['result']['route_mode'], 'COMPOSITE')
+        self.assertEqual(envelope['emission_outcome'], 'EMITTED')
+        self.assertIsNotNone(envelope['directive'])
+        human_action = next(
+            step['assigned_actions'][0]
+            for step in envelope['result']['execution_plan']
+            if step['actor'] == 'HUMAN')
+        self.assertEqual(
+            human_action['human_necessity_basis'],
+            known('DIRECT_HUMAN_OBSERVATION_OBJECTIVE'))
+
     def test_observed_relay_cannot_self_assert_trusted_human_responsibility(self):
         request = load_json(
             ROOT / 'tests/fixtures/pcbw-r07-observed-human-command-relay.request.json')
@@ -343,7 +376,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_project_emission_contract_matches_executable_integration_gate(self):
         contract = load_json(
-            ROOT / 'project-integration/framework-lab.reusable-directive-emission.v0.1.0.json')
+            ROOT / 'project-integration/framework-lab.reusable-directive-emission.v0.2.0.json')
         self.assertEqual(
             contract['emission_contract']['emission_condition'],
             'VALIDATED_ROUTING_RESULT_PASS_AND_DIRECTIVE_VALIDATION_PASS')
@@ -352,6 +385,13 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(
             contract['enforcement_boundary']['external_project_synchronization'],
             'REQUIRED')
+        self.assertEqual(
+            contract['emission_contract']['human_necessity_scope'],
+            'HUMAN_ACTION_INSTANCE')
+        self.assertEqual(
+            contract['emission_contract']['composite_execution'][
+                'ai_instruction_plus_human_deterministic_execution'],
+            'COMMAND_RELAY_NOT_COMPOSITE')
 
         request = load_json(
             ROOT / 'tests/fixtures/pcbw-r07-observed-human-command-relay.request.json')

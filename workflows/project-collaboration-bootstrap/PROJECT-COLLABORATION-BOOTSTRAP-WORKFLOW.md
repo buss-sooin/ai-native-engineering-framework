@@ -151,6 +151,10 @@ GUI를 절대 우선하지 않는다. 직접 런타임 관측이 목적일 때�
 
 재사용 가능한 라우팅 지시문의 결정론적 검증 경계에서는 사람 실행 선택에 사람 필요성 근거가 없으면 `UNRESOLVED`, 결정론적 행위를 사람에게 배정하면서 유효한 사람 필요성이 없고 적합하고 권한 있는 AI 환경이 존재하면 `FAIL`, `NO_SUITABLE_AUTHORIZED_AI_SURFACE`를 주장하면서 영향 부분 재평가가 확인되지 않으면 `UNRESOLVED`, 사람 대상 운영 의미가 불충분하면 `FAIL`로 판정한다. `PASS`만 지시문을 방출하며 `FAIL`과 `UNRESOLVED`는 방출을 차단한다. 표현 계층의 경고만으로 이 검증을 대체하지 않는다.
 
+사람 필요성은 사람에게 배정된 각 행위 인스턴스(action-instance)에 대해 성립해야 한다. 역할 이름, `Human IDE / Terminal`이라는 환경 선언, 런타임·shell 사용, 현재 세션의 실행 역량 부족, 사람이 결과를 볼 수 있다는 사실 또는 AI가 만든 명령을 사람이 복사·실행할 수 있다는 사실은 그 자체로 사람 필요성을 만들지 않는다.
+
+복합 실행(Composite Execution)은 같은 책임 안에 AI 실행 책임과 유효한 사람 필요성에 근거한 사람 직접 엔지니어링 책임이 모두 있을 때만 성립한다. AI가 지시하고 사람이 결정론적 명령·폴링·배포·사전 점검·근거 수집을 수행한 뒤 결과만 반환하는 구조는 복합 실행이 아니라 명령 전달이며, 적합하고 권한 있는 AI 실행 환경이 있으면 `FAIL / INVALID_HUMAN_DELEGATION`으로 차단한다. 여러 AI 실행 환경을 사용하는 것만으로 복합 실행을 선언하지 않는다.
+
 ### 협업 조율 책임과 전담 Control Plane
 
 여러 역할이나 실행 환경을 연결하는 협업에는 필요한 수준의 조율 책임이 명확해야 한다. 조율 책임은 현재 상태(Current State), 현재 관문(Current Gate), 다음 책임, 인계 목적지와 반환·종료 목적지를 추적할 수 있다.
@@ -252,6 +256,18 @@ GUI를 절대 우선하지 않는다. 직접 런타임 관측이 목적일 때�
 
 영향 부분 재평가(Targeted Re-evaluation)를 허용하며 항상 전체 초기 구성을 반복하지 않는다. 재평가 자체가 새 사람 승인 관문을 의미하지 않는다. 엔지니어링 의도, 범위, 권한·접근, 위험·영향 범위, 비가역적·고영향 행위 또는 승인된 실행 경계의 실질적 변경 여부를 상위 Governance 기준으로 별도 판단한다.
 
+### 확정 규칙 집행 회귀의 제한된 교정(Corrective Fast Path)
+
+이미 Effective인 규칙이 기대 동작을 결정하고 구현·집행 회귀가 확인된 경우, 다음 조건을 모두 충족하면 하나의 제한된 교정 책임에서 `Evidence → Minimal Correction → Deterministic Verification → Synchronize / Report`를 수행할 수 있다.
+
+- 엔지니어링 의도와 범위가 바뀌지 않는다.
+- 권한·접근과 승인된 실행 경계가 바뀌지 않는다.
+- 위험 또는 영향 범위가 실질적으로 증가하지 않는다.
+- 새로운 비가역적·고영향 행위를 도입하지 않는다.
+- 새로운 Architecture 또는 규칙 의미 결정을 요구하지 않는다.
+
+이 Fast Path는 새로운 생명주기나 별도 규칙이 아니다. 검증, 정본 동기화, fail-closed 판정과 중요한 Governance 변경의 사람 승인을 완화하지 않는다. 교정 중 규칙 의미의 실질적 변경, 권한 변경, 해결되지 않은 모호성 또는 검증 실패가 드러나면 Fast Path를 중단하고 적용 가능한 기존 Governance 절차로 반환한다. 조건이 유지되는 동안에는 별도 Design·Independent Review·Verification·Canonicalization 세션이나 추가 사람 승인 관문을 의무화하지 않는다.
+
 ## 산출물과 다른 Workflow의 경계
 
 v0.1의 필수 정본 산출물은 이 Workflow Definition 하나다. 활성화, 개념, 생명주기, 라우팅, 책임, 인계와 재평가의 의미 요구사항을 이 문서에서 관리한다.
@@ -274,7 +290,7 @@ v0.1에서는 프로젝트·플랫폼 프로필이나 해당 Template, 초기 �
 | PCBW-R04 — Human Direct Engineering | Workflow | Mandatory | Workflow 활성화 시 | 사람의 직접 엔지니어링 수행(Human Direct Engineering)이 이해·판단·학습·위험 통제 또는 실행 단순성에 더 적합하면 정상적인 실행 선택지로 선택할 수 있다. AI 역량의 존재만으로 사람의 직접 작업을 제거하지 않는다. |
 | PCBW-R05 — Bounded Handoff | Workflow | Conditional | 역할·실행 환경 사이의 인계 또는 맥락·권한·책임 손실 위험이 있는 인계가 발생하거나, 새로운 Session / Work / 실행 세션으로 사용자를 라우팅하거나 재사용 가능한 실행 지시문을 제공하는 경우 | 다음 책임자가 현재 상태, 실행 경계, 검증 요구와 반환 목적지를 추측하지 않도록 인계 계약(Handoff Contract)의 맥락을 보존한다. 역량·변경 권한·실행 의미가 다른 환경으로 이동할 때 세션 역할(Session Role)과 실행 환경(Execution Surface)을 각각 명시하며 일반적인 `Chat` 표현만으로 목적지를 지정하지 않는다. 새로운 실행 환경으로 Routing하거나 재사용 가능한 실행 지시문을 제공할 때는 상세 지시문보다 먼저 프로젝트 / 작업 공간(Project / Workspace), 권장 Session / Work 제목(Recommended Session / Work Title), 목적지 세션 역할(Destination Session Role), 실행 환경(Execution Surface), 권장 모델(Recommended Model), 권장 추론 수준(Recommended Reasoning Level)을 포함한 라우팅 헤더(Routing Header)를 제공한다. 모델 또는 추론 수준이 해당 실행 환경에서 사용자 선택 대상이 아니면 `Surface-managed / N/A`로 식별한다. 추천은 선택이나 실행 권한을 의미하지 않으며 `Recommended ≠ Selected ≠ Authorized`를 유지한다. |
 | PCBW-R06 — Targeted Re-evaluation | Workflow | Conditional | 엔지니어링 의도, Workflow, 실행 환경, 역량 가용성, 권한·접근, 위험, 검증 또는 협업 효과에 실질적 변화 발생 시 | 영향을 받은 초기 구성 판단을 필요한 수준에서 재평가한다. 재평가 자체는 새 사람 승인 관문(Human Gate)을 뜻하지 않으며 승인 경계 변경 여부는 상위 Governance에 따라 별도 판단한다. |
-| PCBW-R07 — AI Execution Continuity / Human Interruption Boundary | Workflow | Mandatory | PCBW가 활성화되고 사람과 AI 사이의 실행 책임 또는 실행 환경을 배정하거나 재배정할 때 | 승인된 실행 경계 안에서 적절하고 권한 있는 AI 실행 환경이 수행할 수 있는 결정론적 작업을 현재 AI 환경의 역량 부족만으로 사람에게 위임하지 않는다. PCBW-R06에 따라 가능한 AI 실행 환경과 권한을 재평가한 뒤 사람 실행의 실제 필요성을 판단한다. 사람 실행을 선택하면 사람 필요성 근거와 사람 대상 운영 의미를 명시한다. 사람 필요성 근거 누락 또는 `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에 필요한 영향 부분 재평가 미확인은 `UNRESOLVED`, 유효한 사람 필요성 없이 적합하고 권한 있는 AI 환경이 존재하는 결정론적 사람 위임 또는 불충분한 사람 대상 운영 의미는 `FAIL`이며, 두 상태 모두 재사용 가능한 라우팅 지시문 방출을 차단한다. PCBW-R04의 정당한 사람 직접 엔지니어링 수행은 유지한다. |
+| PCBW-R07 — AI Execution Continuity / Human Interruption Boundary | Workflow | Mandatory | PCBW가 활성화되고 사람과 AI 사이의 실행 책임 또는 실행 환경을 배정하거나 재배정할 때 | 승인된 실행 경계 안에서 적절하고 권한 있는 AI 실행 환경이 수행할 수 있는 결정론적 작업을 현재 AI 환경의 역량 부족만으로 사람에게 위임하지 않는다. PCBW-R06에 따라 가능한 AI 실행 환경과 권한을 재평가한 뒤 사람 실행의 실제 필요성을 각 사람 행위 인스턴스에서 판단한다. 사람 실행을 선택하면 사람 필요성 근거와 사람 대상 운영 의미를 명시한다. 역할·환경 선언 또는 사람이 AI 명령을 실행할 수 있다는 사실은 사람 필요성을 만들지 않는다. 복합 실행은 AI 책임과 유효한 사람 필요성에 근거한 사람 직접 책임이 모두 있을 때만 성립한다. 사람 필요성 근거 누락 또는 `NO_SUITABLE_AUTHORIZED_AI_SURFACE`에 필요한 영향 부분 재평가 미확인은 `UNRESOLVED`, 유효한 사람 필요성 없이 적합하고 권한 있는 AI 환경이 존재하는 결정론적 사람 위임·명령 전달형 복합 실행 또는 불충분한 사람 대상 운영 의미는 `FAIL`이며, 두 상태 모두 재사용 가능한 라우팅 지시문 방출을 차단한다. PCBW-R04의 정당한 사람 직접 엔지니어링 수행은 유지한다. |
 
 ## 승인과 정본화 근거
 

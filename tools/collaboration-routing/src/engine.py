@@ -13,7 +13,7 @@ from semantic_sufficiency import (
     is_human_usable_description,
 )
 
-VERSION = '0.8.0'
+VERSION = '0.9.0'
 
 HUMAN_ROLE_REQUIRED_OWNER_FIELDS = {
     'AUTHORITY_DECISION': {'decision_owner'},
@@ -153,6 +153,9 @@ def validate_internal_conformance(result):
     valid = not result['failure_codes'] and not result['unresolved_issues']
     valid = valid and not result['targeted_re_evaluation']
     valid = valid and len(plan) == len(required) and {s['action_id'] for s in plan} == set(required)
+    actors = {step['actor'] for step in plan}
+    expected_mode = ('COMPOSITE' if actors == {'AI', 'HUMAN'} else 'SINGLE')
+    valid = valid and result['route_mode'] == expected_mode
     for step in plan:
         action = required[step['action_id']]
         definition = definitions[action['kind']['value']]
@@ -539,9 +542,10 @@ def _evaluate(request, profile, deadline):
         fail('ROUTING_CONTRACT_CONTRADICTION')
     status = 'FAIL' if failures else ('UNRESOLVED' if issues else 'PASS')
     chosen_ids = sorted({step['surface_id'] for step in plan})
-    mode = ('COMPOSITE' if len(chosen_ids) > 1 else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
+    chosen_actors = {step['actor'] for step in plan}
+    mode = ('COMPOSITE' if chosen_actors == {'AI', 'HUMAN'} else 'SINGLE') if len(plan) == len(ids) else 'UNSELECTED'
     result = {
-        'schema_version': '1.7', 'routing_result_id': 'pending', 'request_id': request['request_id'],
+        'schema_version': '1.8', 'routing_result_id': 'pending', 'request_id': request['request_id'],
         'routing_status': status, 'project': copy.deepcopy(request['project']),
         'destination_session_role': copy.deepcopy(request['destination_session_role']), 'route_mode': mode,
         'required_capabilities': sorted(capabilities), 'feasible_surfaces': feasible,

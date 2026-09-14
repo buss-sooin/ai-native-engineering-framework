@@ -1,0 +1,286 @@
+{
+  "schema_version": "1.5",
+  "request_id": "pcbw-r07-runtime-entry-command-relay-composite",
+  "project": {
+    "state": "KNOWN",
+    "value": "AI-Native Engineering Framework Lab"
+  },
+  "title": {
+    "state": "KNOWN",
+    "value": "Runtime Entry Requalification / Human-Controlled Recovery"
+  },
+  "objective": {
+    "state": "KNOWN",
+    "value": "Inspect repository Evidence, then make a Human operator execute deterministic runtime recovery, deployment, preflight, polling, and Evidence capture commands."
+  },
+  "destination_session_role": {
+    "state": "KNOWN",
+    "value": "Runtime Entry Requalification / Human-Controlled Recovery"
+  },
+  "target": {
+    "state": "KNOWN",
+    "value": "authorized Project repository and runtime entry-requalification boundary"
+  },
+  "current_state": {
+    "state": "KNOWN",
+    "value": "Repository Evidence inspection is assigned to AI and deterministic execution is assigned to Human IDE / Terminal."
+  },
+  "current_gate": {
+    "state": "KNOWN",
+    "value": "No independent Human authority, observation objective, risk-control responsibility, learning objective, simpler-or-safer basis, or AI-surface absence has been established."
+  },
+  "canonical_authority": {
+    "state": "KNOWN",
+    "value": [
+      "workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md#PCBW-R07"
+    ]
+  },
+  "canonical_conflict": "CLEAR",
+  "profile": {
+    "id": "framework-lab",
+    "version": "0.4.0"
+  },
+  "required_actions": [
+    {
+      "id": "inspect-repository-evidence",
+      "kind": {
+        "state": "KNOWN",
+        "value": "inspect_repository"
+      },
+      "actor": {
+        "state": "KNOWN",
+        "value": "AI"
+      },
+      "authority": "NOT_REQUIRED",
+      "approval_reference": {
+        "state": "NOT_REQUIRED"
+      },
+      "target": {
+        "state": "KNOWN",
+        "value": "authorized Project repository and runtime entry-requalification boundary"
+      },
+      "effects": {
+        "state": "KNOWN",
+        "value": [
+          "READ_ONLY"
+        ]
+      },
+      "source_references": {
+        "state": "KNOWN",
+        "value": [
+          "confirmed-regression:ai-repository-evidence-inspection"
+        ]
+      },
+      "human_direct": {
+        "state": "KNOWN",
+        "value": false
+      },
+      "human_necessity_basis": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_return_responsibility": {
+        "state": "NOT_REQUIRED"
+      },
+      "targeted_re_evaluation_established": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_facing_semantics": {
+        "state": "NOT_REQUIRED"
+      },
+      "verification_requirement": {
+        "state": "KNOWN",
+        "value": [
+          "Verify repository identity and existing Evidence before runtime work."
+        ]
+      },
+      "session_role": {
+        "state": "KNOWN",
+        "value": "Repository and Evidence Inspector"
+      }
+    },
+    {
+      "id": "relay-runtime-entry-commands",
+      "kind": {
+        "state": "KNOWN",
+        "value": "run_command"
+      },
+      "actor": {
+        "state": "KNOWN",
+        "value": "HUMAN"
+      },
+      "authority": "AUTHORIZED",
+      "approval_reference": {
+        "state": "KNOWN",
+        "value": "Existing boundary authorizes deterministic command execution by a suitable Codex CLI environment."
+      },
+      "target": {
+        "state": "KNOWN",
+        "value": "authorized Project repository and runtime entry-requalification boundary"
+      },
+      "effects": {
+        "state": "KNOWN",
+        "value": [
+          "COMMAND_EXECUTION",
+          "ARTIFACT_WRITE"
+        ]
+      },
+      "source_references": {
+        "state": "KNOWN",
+        "value": [
+          "confirmed-regression:verify-git-and-static-preflight",
+          "confirmed-regression:collect-container-and-kafka-state",
+          "confirmed-regression:restart-broker-if-required",
+          "confirmed-regression:bounded-polling",
+          "confirmed-regression:deploy-frozen-image",
+          "confirmed-regression:runtime-preflight",
+          "confirmed-regression:capture-evidence"
+        ]
+      },
+      "human_direct": {
+        "state": "KNOWN",
+        "value": true
+      },
+      "human_necessity_basis": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_return_responsibility": {
+        "state": "KNOWN",
+        "value": {
+          "kind": "RAW_OUTPUT_ONLY",
+          "description": "Return the deterministic command output and captured Evidence to AI for interpretation.",
+          "source_references": [
+            "confirmed-regression:human-command-relay-return"
+          ]
+        }
+      },
+      "targeted_re_evaluation_established": {
+        "state": "NOT_REQUIRED"
+      },
+      "human_facing_semantics": {
+        "state": "KNOWN",
+        "value": {
+          "structured_operational_semantics": {
+            "state": "KNOWN",
+            "value": {
+              "action_id": "relay-runtime-entry-commands",
+              "target_reference": "ACTION_TARGET",
+              "interface_reference": {
+                "source": "SELECTED_EXECUTION_SURFACE",
+                "id": "human-terminal"
+              },
+              "observation": {
+                "target_reference": "ACTION_TARGET",
+                "capability_ids": [
+                  "command_execution"
+                ],
+                "verification_reference": "ACTION_VERIFICATION_REQUIREMENT"
+              },
+              "decision_criterion_reference": "ACTION_HUMAN_RETURN_RESPONSIBILITY",
+              "interpretation_reference": "PROFILE_ACTION_HUMAN_HANDOFF",
+              "cli_fallback": {
+                "state": "NOT_REQUIRED"
+              }
+            }
+          },
+          "supplemental_note": {
+            "state": "KNOWN",
+            "value": "Human directly observes runtime output and decides only whether the next prepared recovery command may proceed."
+          }
+        }
+      },
+      "verification_requirement": {
+        "state": "KNOWN",
+        "value": [
+          "Verify Git branch and HEAD.",
+          "Run static preflight.",
+          "Collect container and Kafka state.",
+          "Restart the broker if the deterministic predicate requires it.",
+          "Poll bounded recovery predicates.",
+          "Deploy the frozen image.",
+          "Run runtime preflight and capture Evidence."
+        ]
+      },
+      "session_role": {
+        "state": "KNOWN",
+        "value": "Human IDE / Terminal Runtime Recovery Operator"
+      }
+    }
+  ],
+  "surface_selection": {
+    "state": "KNOWN",
+    "value": [
+      {
+        "action_id": "inspect-repository-evidence",
+        "surface_id": "work-mode"
+      },
+      {
+        "action_id": "relay-runtime-entry-commands",
+        "surface_id": "human-terminal"
+      }
+    ]
+  },
+  "approved_execution_boundary": {
+    "state": "KNOWN",
+    "value": {
+      "target": "authorized Project repository and runtime entry-requalification boundary",
+      "allowed_action_ids": [
+        "inspect-repository-evidence",
+        "relay-runtime-entry-commands"
+      ],
+      "allowed_effects": [
+        "READ_ONLY",
+        "COMMAND_EXECUTION",
+        "ARTIFACT_WRITE"
+      ]
+    }
+  },
+  "prohibited_actions": {
+    "state": "KNOWN",
+    "value": []
+  },
+  "responsibility": {
+    "decision_owner": {
+      "state": "KNOWN",
+      "value": "AI Project Control Plane"
+    },
+    "verification_owner": {
+      "state": "KNOWN",
+      "value": "AI Project Control Plane"
+    },
+    "continuation_authority": "AUTHORIZED"
+  },
+  "verification_contract": {
+    "state": "KNOWN",
+    "value": [
+      "AI interprets the returned runtime state and Evidence and determines the next command."
+    ]
+  },
+  "return_contract": {
+    "state": "KNOWN",
+    "value": {
+      "destination": "AI Project Control Plane for runtime-state interpretation and continuation",
+      "human_action_returns": [
+        {
+          "action_id": "relay-runtime-entry-commands",
+          "responsibility_kind": "RAW_OUTPUT_ONLY"
+        }
+      ]
+    }
+  },
+  "stop_conditions": {
+    "state": "KNOWN",
+    "value": [
+      "Stop if a deterministic predicate fails or the prepared command leaves the approved boundary."
+    ]
+  },
+  "evidence_requirement": {
+    "state": "KNOWN",
+    "value": [
+      "Preserve repository, container, Kafka, deployment, and runtime-preflight Evidence for AI review."
+    ]
+  },
+  "branch_revision_environment": {
+    "state": "KNOWN",
+    "value": "A suitable authorized Codex CLI environment is available for all deterministic command-execution actions."
+  }
+}

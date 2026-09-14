@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:collaboration-routing:routing-result:1.7",
+  "$id": "urn:collaboration-routing:routing-result:1.8",
   "type": "object",
   "properties": {
     "schema_version": {
       "enum": [
-        "1.7"
+        "1.8"
       ]
     },
     "routing_result_id": {
@@ -1997,7 +1997,7 @@
     },
     "validator_version": {
       "enum": [
-        "0.8.0"
+        "0.9.0"
       ]
     },
     "failure_codes": {

@@ -82,7 +82,7 @@ Routing Request → Integration Adapter → Request Validation
 | `schemas/project-routing-profile.schema.json` | 프로젝트의 행위·역량·환경 매핑 |
 | `schemas/routing-result.schema.json` | 기계 소비용 결과 계약 |
 | `profiles/framework-lab.v0.4.0.json` | Framework Lab의 PCBW-R07 신뢰 Human 책임·action handoff·운영 인터페이스·가용성 선언 |
-| `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json` | 실제 Project Instructions에 동기화할 재사용 지시문 방출 의무와 저장소/플랫폼 경계 |
+| `project-integration/framework-lab.reusable-directive-emission.v0.2.0.json` | 실제 Project Instructions에 동기화할 action-instance 사람 필요성·복합 실행 방출 의무와 저장소/플랫폼 경계 |
 | `src/schema_validation.py` | 번들 스키마에서 사용하는 JSON Schema 부분집합 검증 |
 | `src/engine.py` | 라우팅, 책임 배분, 권한·경계 검증 및 내부 적합성 검사 |
 | `src/directive.py` | 결정론적 표현과 지시문 적합성 검증 |
@@ -90,7 +90,7 @@ Routing Request → Integration Adapter → Request Validation
 | `src/directive_conformance.py` | Renderer와 독립적인 지시문 구조·의미 검증 |
 | `src/integration.py` | Engine 의미를 변경하지 않는 호출 조율과 fail-closed 방출 관문 |
 | `src/integration_cli.py` | 운영자 매개 통합 흐름의 로컬 JSON 입출력 |
-| `tests/fixtures/` | 예제 요청, 고정 회귀 A–I와 역사적 지시문 실패 fixture |
+| `tests/fixtures/` | 예제 요청, 고정 회귀 A–I, 역사적 지시문 실패와 runtime-entry Composite command-relay fixture |
 | `tests/test_routing.py` | 정상·오류·변조·CLI 검증 |
 | `tests/test_integration.py` | 계약 보존, 역사적 실패, 장애 주입과 방출 차단 검증 |
 
@@ -147,7 +147,7 @@ Routing Request → Integration Adapter → Request Validation
 
 환경은 행위에 필요한 **모든** 역량과 effect, 요청에서 선택한 AI/HUMAN 책임 및 `KNOWN true` 가용성을 충족해야 후보가 된다. 프로필 action의 `actor`는 기본 책임이며, 정당한 사람 직접 수행을 선택할 때는 동일한 역량·effect 계약을 유지한 채 `actor=HUMAN`으로 재배정할 수 있다. `required_capabilities ⊆ surface.capabilities`와 `required_effects ⊆ surface.supported_effects`는 독립적으로 검사한다. 둘 다 위반하면 두 진단을 보존한다. 권한이 `AUTHORIZED`라도 `SURFACE_EFFECT_MISMATCH`를 면제하지 않는다. 실효 effect는 프로필의 행위별 최소 effect와 요청의 명시적 effect를 합친 값이다. 요청이 최소 effect를 지우거나 추가 변경 effect의 권한 검사를 우회할 수 없다. 후보 중 명시적 선택이 있으면 이를 검증한다. 없으면 프로필의 `preferred_surfaces` 순서를 동률 해소 기준으로 사용한다. 선호 후보가 없을 때 유일한 적합 후보만 선택하며 여러 후보가 남으면 `AMBIGUOUS_SURFACE_SELECTION`이다. 필요한 역량을 갖추지 못한 환경으로의 하향 대체는 없다.
 
-계획은 요청의 행위 순서를 보존한다. v0의 각 실행 구간(Route Leg)은 행위 하나를 배정하며 `leg_id=leg-<action id>`를 사용한다. 각 구간에 `actor`, `session_role`, `execution_surface`, 원본 행위 전체를 담은 `assigned_actions`, `required_capabilities`, `effect_conformance`, `authority_status`, `model_recommendation`, `reasoning_recommendation`을 보존한다. `effect_conformance`의 `PASS`는 effect 적합성만 의미하며 실행 권한은 `authority_status`로 별도 확인한다. 이전의 `action_id`, `kind`, `surface_id`, `surface_label`, `capabilities`, `effects`는 조회용 투영으로 유지하고 내부 적합성 검사에서 상세 계약과 대조한다. 선택 환경이 하나면 `SINGLE`, 둘 이상이면 `COMPOSITE`이며, 미완성 계획은 `UNSELECTED`다. 복합 계획은 AI와 사람의 실행 책임을 각각 보존한다. 작업 의존성 스케줄링, 병렬 실행과 자동 인계는 하지 않는다.
+계획은 요청의 행위 순서를 보존한다. v0의 각 실행 구간(Route Leg)은 행위 하나를 배정하며 `leg_id=leg-<action id>`를 사용한다. 각 구간에 `actor`, `session_role`, `execution_surface`, 원본 행위 전체를 담은 `assigned_actions`, `required_capabilities`, `effect_conformance`, `authority_status`, `model_recommendation`, `reasoning_recommendation`을 보존한다. `effect_conformance`의 `PASS`는 effect 적합성만 의미하며 실행 권한은 `authority_status`로 별도 확인한다. 이전의 `action_id`, `kind`, `surface_id`, `surface_label`, `capabilities`, `effects`는 조회용 투영으로 유지하고 내부 적합성 검사에서 상세 계약과 대조한다. 완료된 계획에서 AI와 HUMAN 실행 책임이 모두 있으면 `COMPOSITE`, 한 Actor의 책임만 있으면 `SINGLE`이며, 미완성 계획은 `UNSELECTED`다. 같은 Actor가 여러 실행 환경을 사용해도 각 Route Leg와 Routing Header에 실제 환경을 모두 보존하되 복합 실행으로 오표기하지 않는다. 복합 계획의 모든 Human Route Leg는 독립적인 사람 필요성과 사람 직접 책임을 충족해야 한다. 작업 의존성 스케줄링, 병렬 실행과 자동 인계는 하지 않는다.
 
 ## 권한과 실행 경계
 
@@ -174,6 +174,7 @@ Routing Request → Integration Adapter → Request Validation
 | 결정론적 사람 실행 + `human_necessity_basis=NOT_REQUIRED` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | 결정론적 사람 실행 + 인식되지 않은 basis 또는 basis와 불일치하는 반환 책임 + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | 결정론적 사람 실행 + `ACK_ONLY` 또는 `RAW_OUTPUT_ONLY` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
+| AI 책임 + 사람의 결정론적 명령 전달 책임을 `COMPOSITE`로 결합 + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 재평가 미확인 | `UNRESOLVED / TARGETED_RE_EVALUATION_NOT_ESTABLISHED` |
 | 결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / INVALID_HUMAN_DELEGATION` |
 | 비결정론적 사람 실행 + `NO_SUITABLE_AUTHORIZED_AI_SURFACE` + 적합하고 권한 있는 AI 환경 존재 | `FAIL / NO_SUITABLE_AI_SURFACE_CONTRADICTION` |
@@ -358,7 +359,7 @@ Project Routing Profile Schema `1.2`와 Framework Lab Profile `0.3.0`은 변경�
 
 이 통합은 계속 운영자 매개 로컬 시험(Operator-mediated Local Trial)이다. 저장소 밖의 실제 ChatGPT Project 재사용 지시문 생성 경로가 이 Adapter를 반드시 호출하도록 만드는 플랫폼 설정 또는 ChatGPT-native interceptor는 이 저장소에 없다. 따라서 테스트 통과는 라이브 Project 집행을 증명하지 않는다. 라이브 강제 적용에는 Project Control Plane의 지시문 생성·방출 직전 지점에 Routing Request 구성, 이 Adapter 호출, `EMITTED` 외 결과의 방출 금지를 배포할 플랫폼 소유 권한이 필요하다.
 
-저장소가 지원하는 가장 강한 Project 수준 계약은 `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json`이다. 이 아티팩트는 모든 재사용 Routing/Handoff 지시문을 방출하기 전에 Required Action·Capability·Human Necessity를 평가하고, 결정론적 Human command relay를 거부하며, PCBW-R06 영향 부분 재평가 후 Routing Result와 Directive Validation이 모두 `PASS`일 때만 방출하도록 요구한다. `Human IDE / Terminal`을 missing-capability 기본 fallback으로 사용하는 것도 금지한다. 아티팩트 상태는 `CANDIDATE_FOR_EXTERNAL_PROJECT_SYNCHRONIZATION`이며 저장소 테스트는 내용과 로컬 Integration 동작의 일치만 검증한다. 실제 ChatGPT Project Instructions 반영과 그 독립 확인은 플랫폼/Project 설정 소유자가 수행해야 하므로 **EXTERNAL PROJECT SYNCHRONIZATION REQUIRED**다.
+저장소가 지원하는 가장 강한 Project 수준 계약은 `project-integration/framework-lab.reusable-directive-emission.v0.2.0.json`이다. 이 아티팩트는 모든 재사용 Routing/Handoff 지시문을 방출하기 전에 Required Action·Capability와 각 Human action-instance의 Human Necessity를 평가하고, 결정론적 Human command relay와 이를 가장한 Composite Execution을 거부하며, PCBW-R06 영향 부분 재평가 후 Routing Result와 Directive Validation이 모두 `PASS`일 때만 방출하도록 요구한다. `Human IDE / Terminal`을 missing-capability 기본 fallback으로 사용하는 것도 금지한다. 아티팩트 상태는 `CANDIDATE_FOR_EXTERNAL_PROJECT_SYNCHRONIZATION`이며 저장소 테스트는 내용과 로컬 Integration 동작의 일치만 검증한다. 실제 ChatGPT Project Instructions 반영과 그 독립 확인은 플랫폼/Project 설정 소유자가 수행해야 하므로 **EXTERNAL PROJECT SYNCHRONIZATION REQUIRED**다.
 
 ## 68C 교정: 통합 입력 결합과 신뢰 Human 책임
 
@@ -370,7 +371,7 @@ Request가 `HUMAN_EXECUTION_SIMPLER_OR_SAFER`, `DIRECT_ENGINEERING_RESULT`와 �
 
 관측 fixture는 실제 파일 생성 책임을 반영해 action effect와 승인 경계에 `ARTIFACT_WRITE`를 추가했다. command-only R07 판정은 별도의 범용 fixture에서 계속 격리한다. 관측 fixture의 AI decision ownership과 ACK-only return contract를 유지한 채 basis·action 반환 종류·임의 source만 바꾸는 회귀와, top-level 반환 종류까지 같은 주장으로 바꾸는 회귀는 모두 `FAIL / INVALID_HUMAN_DELEGATION`이고 방출되지 않는다.
 
-실제 ChatGPT Project 경계는 바뀌지 않았다. 공식 OpenAI 문서는 Project instructions가 Project의 chats에 적용되며 Codex CLI는 ChatGPT Projects view를 제공하지 않는다고 설명한다. 저장소에는 Project 응답을 자동 가로채는 플랫폼 interceptor가 없으므로, 로컬 Integration PASS는 실제 Project Instructions 동기화를 증명하지 않는다. `project-integration/framework-lab.reusable-directive-emission.v0.1.0.json`의 외부 동기화와 독립 확인이 계속 필요하다.
+실제 ChatGPT Project 경계는 바뀌지 않았다. 공식 OpenAI 문서는 Project instructions가 Project의 chats에 적용되며 Codex CLI는 ChatGPT Projects view를 제공하지 않는다고 설명한다. 저장소에는 Project 응답을 자동 가로채는 플랫폼 interceptor가 없으므로, 로컬 Integration PASS는 실제 Project Instructions 동기화를 증명하지 않는다. 현재 방출 계약인 `project-integration/framework-lab.reusable-directive-emission.v0.2.0.json`의 외부 동기화와 독립 확인이 계속 필요하다.
 
 ## 71 교정: action-instance Human 책임 소유권 결합
 
@@ -380,4 +381,14 @@ Project Routing Profile Schema `1.4`는 각 신뢰 Human role에 `required_sessi
 
 Engine은 action ID·kind·actor·선택 Human surface·basis·반환 종류·session role·target·effect·verification·action 반환 계약의 기존 교차 검증에 이 Profile 소유 owner binding을 추가한다. 따라서 관측 fixture가 AI decision/verification ownership과 command-relay topology를 유지한 채 정확한 `framework-lab:direct-engineering` ID를 복사해도 `FAIL / INVALID_HUMAN_DELEGATION`이다. 이 판정에는 자유 텍스트 keyword나 `done`·`완료` 같은 어휘를 사용하지 않는다.
 
-현재 계약 버전은 Routing Request Schema `1.5`, Routing Result Schema `1.7`, Project Routing Profile Schema `1.4`, Framework Lab Profile 후보 `0.4.0`, Engine·Integration `0.8.0`이다. Profile `0.4.0`은 아직 커밋·게시된 기준선이 아닌 하나의 미커밋 후보이므로 같은 후보 파일 안에서 완성했다. PCBW-R07 정본 의미와 외부 Project synchronization 경계는 변경하지 않았다.
+71 교정 당시 계약 버전은 Routing Request Schema `1.5`, Routing Result Schema `1.7`, Project Routing Profile Schema `1.4`, Framework Lab Profile `0.4.0`, Engine·Integration `0.8.0`이었다. PCBW-R07 정본 의미와 외부 Project synchronization 경계는 변경하지 않았다.
+
+## Human Necessity 및 Composite Execution Fast Correction
+
+확인된 런타임 진입 재검증 회귀는 AI가 저장소와 Evidence만 검사하고 사람이 준비된 Git 확인, 정적 사전 점검, 컨테이너·Kafka 상태 수집, 조건부 broker 재시작, 제한된 폴링, frozen image 배포, runtime preflight와 Evidence 수집을 실행하도록 `Composite Execution`을 선언했다. 이 구조에는 독립적인 사람 권한·직접 관측 목표·위험 통제·학습·더 단순하거나 안전한 직접 실행 근거가 없고, 적합하고 권한 있는 Codex CLI가 존재하므로 Human command relay다.
+
+Routing Result `1.8`과 Engine·Integration `0.9.0`은 `COMPOSITE`를 선택 환경 수가 아니라 AI와 HUMAN 책임의 실제 결합으로 계산한다. Human Route Leg의 기존 action-instance R07 검증은 그대로 적용되므로, 위 fixture는 `FAIL / INVALID_HUMAN_DELEGATION`, Codex CLI 영향 부분 재평가 후보, `directive=null`로 종료된다. 같은 Actor가 여러 환경을 사용하는 정상 경로는 `SINGLE`로 표현하되 환경·역량·권한 정보를 잃지 않는다. Framework Lab Profile과 Routing Request Schema는 변경하지 않았다.
+
+Project 방출 계약 `0.2.0`은 Human Necessity의 action-instance 범위, 사람 필요성을 만들지 못하는 선언, Composite Execution의 AI+Human 책임 조건과 command-relay 금지를 구조화했다. Effective PCBW에는 새 규칙이나 생명주기를 추가하지 않고, 기존 Effective 규칙이 이미 결과를 결정하는 집행 회귀에만 적용하는 제한된 교정(Corrective Fast Path)을 명시했다. 권한·위험·규칙 의미가 달라지거나 모호성·검증 실패가 발견되면 이 경로는 중단된다.
+
+전체 120개 테스트 메서드는 기존 정상 단일·복합 경로, Human Direct Engineering과 Routing Header를 보존하면서 확인된 runtime-entry Composite command relay의 `FAIL`, 끝단 간 비방출, 유효한 사람 직접 책임을 포함한 Composite의 방출, 같은 Actor의 여러 환경에 대한 mode 계산 및 위조된 mode의 내부 적합성 차단을 검증한다.
