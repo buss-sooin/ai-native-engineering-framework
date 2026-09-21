@@ -146,6 +146,8 @@ Project별 협업 규칙이나 권한 제약은 허용되는 후속 실행 범�
 
 인계는 근본 원인(Root Cause), Remediation 또는 production change를 선언하지 않는다. 후속 Workflow가 이 Evidence를 사용하더라도 해당 Workflow의 별도 검증과 Authority를 따라야 한다.
 
+검증된 재현 인계(Verified Reproduction Handoff)는 필요한 경우 Draft [Post-Incident Analysis Workflow](../post-incident-analysis/POST-INCIDENT-ANALYSIS-WORKFLOW.md)의 입력으로 사용할 수 있다. 이는 선택 가능한 downstream navigation이며 Failure Reproduction Workflow의 생명주기, Outcome, 완료 조건 또는 책임 범위를 변경하지 않는다.
+
 ## Rules와 Obligations
 
 | Rule ID | Rule | Obligation | Activation condition |
