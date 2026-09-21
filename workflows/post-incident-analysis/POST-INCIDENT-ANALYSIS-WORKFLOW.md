@@ -1,10 +1,10 @@
 # Post-Incident Analysis Workflow
 
-Status: Draft
+Status: Effective
 
 ## 목적과 Governance 위치
 
-이 문서는 활성 인시던트(Active Incident)의 즉각적인 안정화 이후, 필요한 경우 장애 근거와 실패 메커니즘을 재구성하고 기술적 결론 및 예방·개선 책임으로 인계하기 위한 Workflow-level Draft Definition이다. Draft 상태이므로 아직 Effective Workflow로 강제 적용되지 않는다.
+이 문서는 활성 인시던트(Active Incident)의 즉각적인 안정화 이후, 필요한 경우 장애 근거와 실패 메커니즘을 재구성하고 기술적 결론 및 예방·개선 책임으로 인계하기 위한 Workflow-level Effective Canonical Definition이다.
 
 - 범위(Scope): Workflow
 - 상위 권한 근거(Parent Authority): [AI Engineering Guidelines](../../governance/AI-ENGINEERING-GUIDELINES.md), Status: Effective
@@ -146,7 +146,7 @@ Workflow 종료점은 `Validated Technical Conclusion and Prevention / Remediati
 
 ## 규칙과 의무(Rules and Obligations)
 
-아래 규칙의 범위는 모두 `Workflow`다. Draft 상태에서는 Effective Governance로 강제 적용되지 않는다.
+아래 규칙의 범위는 모두 `Workflow`다. Effective 상태이며 각 규칙은 명시된 활성화 조건에 따라 적용한다.
 
 | Rule ID / 이름 | Scope | Obligation | Activation condition | 규칙 |
 | --- | --- | --- | --- | --- |

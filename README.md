@@ -22,5 +22,5 @@ Framework-level Canonical Governance는 [`governance/AI-ENGINEERING-GUIDELINES.m
   - Conformance Record: [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW-CONFORMANCE.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW-CONFORMANCE.md)
 - Effective Project AI Capability & Collaboration Bootstrap Workflow v0.1:
   - Definition: [`workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md`](workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md)
-- Draft Post-Incident Analysis Workflow:
+- Effective Post-Incident Analysis Workflow:
   - Definition: [`workflows/post-incident-analysis/POST-INCIDENT-ANALYSIS-WORKFLOW.md`](workflows/post-incident-analysis/POST-INCIDENT-ANALYSIS-WORKFLOW.md)
