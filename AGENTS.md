@@ -7,6 +7,7 @@
 - 저장소 목적과 Effective Canonical Artifact 목록은 [`README.md`](README.md)에서 확인한다.
 - 저장소를 실질적으로 변경하기 전에 [`governance/AI-ENGINEERING-GUIDELINES.md`](governance/AI-ENGINEERING-GUIDELINES.md)를 확인한다.
 - 한국어 기술문서를 작성하거나 실질적으로 수정할 때는 [`governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md`](governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md)를 확인한다.
+- commit을 설계·생성하거나 공개 branch에 변경을 선별 통합할 때는 [`conventions/git/GIT-CONVENTION.md`](conventions/git/GIT-CONVENTION.md)를 확인한다.
 - Failure Reproduction Workflow를 변경할 때는 Definition, 실행 Template과 Conformance Record를 함께 확인한다.
   - [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md)
   - [`workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md`](workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md)

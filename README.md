@@ -16,6 +16,7 @@ Framework-level Canonical Governance는 [`governance/AI-ENGINEERING-GUIDELINES.m
 
 - Effective Framework Governance: [`governance/AI-ENGINEERING-GUIDELINES.md`](governance/AI-ENGINEERING-GUIDELINES.md)
 - Effective Technical Documentation Governance: [`governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md`](governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md)
+- Effective Git Convention: [`conventions/git/GIT-CONVENTION.md`](conventions/git/GIT-CONVENTION.md)
 - Effective Failure Reproduction Workflow v0.1:
   - Definition: [`workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md`](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md)
   - Execution Template: [`workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md`](workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md)
