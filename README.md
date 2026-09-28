@@ -5,7 +5,8 @@
 특정 모델이나 도구의 사용법보다 작업의 목적과 필요한 역량을 먼저 파악하고, 사람과 AI의 책임, 실행 권한, 검증 기준을 구분하는 것을 중요하게 다룹니다.
 
 ## 개발 흐름
-```
+
+```text
 문제와 검증 목표 정의
 → 설계 대안·영향 범위·검증 기준 구체화
 → 중요한 결정과 실행 범위 확정
@@ -26,7 +27,7 @@
 - **실행과 검증을 구분합니다.** 작업을 수행한 AI의 완료 보고만으로 성공을 판단하지 않고, 미리 정한 기준과 실제 로그·상태·데이터를 비교해 결과를 확인합니다.
 - **중요한 결과를 대화에만 남기지 않습니다.** 확정된 설계, 구현 상태와 검증 결과는 저장소의 문서와 기록에 남겨 다른 사람이나 새로운 AI 세션에서도 같은 기준으로 이어갈 수 있게 합니다.
 
-세부적인 적용 조건과 권한 기준은 AI Engineering Guidelines에서 관리합니다.
+세부적인 적용 조건과 권한 기준은 [AI Engineering Guidelines](governance/AI-ENGINEERING-GUIDELINES.md)에서 관리합니다.
 
 ### 적용 예시
 
@@ -44,8 +45,8 @@
 
 이 Framework를 실제 프로젝트에 적용한 사례입니다.
 
-| 프로젝트적용 목적주요 적용 영역확인 가능한 결과                                                       |                                       |                                                |                               |
-| -------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------- | ----------------------------- |
+| 프로젝트 | 적용 목적 | 주요 적용 영역 | 확인 가능한 결과 |
+| --- | --- | --- | --- |
 | [barcode-ingest-pipeline](https://github.com/buss-sooin/barcode-ingest-pipeline) | 비동기 수집 파이프라인의 성능·데이터 정합성과 운영 장애 대응 검증 | 장애 재현 조건과 판정 기준 설계, 사람·AI 책임 분리, 실행 결과 검토와 문서화 | 성능·정합성 검증 결과, 장애 재현 기록, 기술 문서 |
 
 각 프로젝트의 상세 구현과 검증 결과는 해당 저장소에서 확인할 수 있습니다. 새로운 적용 사례가 생기면 같은 형식으로 추가합니다.
@@ -54,13 +55,13 @@
 
 Framework의 세부 원칙과 워크플로는 아래 문서에서 확인할 수 있습니다.
 
-| 문서주요 내용                                  |                                     |
-| ---------------------------------------- | ----------------------------------- |
-| AI Engineering Guidelines                | 사람·AI 협업, 의사결정, 실행 권한과 검증에 대한 공통 원칙 |
-| Technical Documentation Guidelines       | 한국어 기술 문서의 용어와 표현 기준                |
-| Git Convention                           | 변경 이력과 작업 책임을 분명하게 남기기 위한 Git 사용 기준 |
-| Failure Reproduction Workflow            | 장애 재현 조건 정의, 실행, 근거 수집과 결과 판정 방법    |
-| Project Collaboration Bootstrap Workflow | 새 프로젝트에서 사람·AI의 역할과 작업 환경을 정하는 방법   |
-| Post-Incident Analysis Workflow          | 장애 이후 근거를 바탕으로 원인과 복구 결과를 분석하는 방법   |
+| 문서 | 주요 내용 |
+| --- | --- |
+| [AI Engineering Guidelines](governance/AI-ENGINEERING-GUIDELINES.md) | 사람·AI 협업, 의사결정, 실행 권한과 검증에 대한 공통 원칙 |
+| [Technical Documentation Guidelines](governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md) | 한국어 기술 문서의 용어와 표현 기준 |
+| [Git Convention](conventions/git/GIT-CONVENTION.md) | 변경 이력과 작업 책임을 분명하게 남기기 위한 Git 사용 기준 |
+| [Failure Reproduction Workflow](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md) | 장애 재현 조건 정의, 실행, 근거 수집과 결과 판정 방법 |
+| [Project Collaboration Bootstrap Workflow](workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md) | 새 프로젝트에서 사람·AI의 역할과 작업 환경을 정하는 방법 |
+| [Post-Incident Analysis Workflow](workflows/post-incident-analysis/POST-INCIDENT-ANALYSIS-WORKFLOW.md) | 장애 이후 근거를 바탕으로 원인과 복구 결과를 분석하는 방법 |
 
 README는 Framework의 전체 방향과 실제 적용 사례를 빠르게 이해하기 위한 시작점이며, 구체적인 규칙과 절차는 각 문서에서 다룹니다.
