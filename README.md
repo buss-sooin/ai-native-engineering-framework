@@ -25,7 +25,7 @@
 - **결과를 독립적으로 확인합니다.** 실행 전 판정 기준을 정하고, 로그·상태·데이터 등 실제 근거와 대조합니다. 확인된 범위를 넘는 주장은 하지 않습니다.
 - **지속될 결정을 정본에 남깁니다.** 대화 기록은 탐색에 활용하지만, 확정된 설계·구현 상태·검증 결과는 책임에 맞는 저장소 산출물에 반영합니다.
 
-이 원칙의 정확한 적용 조건과 권한 경계는 [AI Engineering Guidelines](governance/AI-ENGINEERING-GUIDELINES.md)를 따릅니다.
+이 원칙의 정확한 적용 조건과 권한 경계는 AI Engineering Guidelines를 따릅니다.
 
 `barcode-ingest-pipeline`에서는 설계·분석에 ChatGPT 일반 Chat, 실제 저장소와 문서 검토에 ChatGPT Work mode, 코드·설정 변경과 테스트·Git 작업에 Codex CLI를 사용했습니다. 사람이 직접 관측하거나 판단해야 하는 책임은 별도로 남겼습니다. 이는 해당 프로젝트의 적용 사례이며, 모든 프로젝트에 같은 제품 구성을 요구하는 규칙은 아닙니다.
 
@@ -34,7 +34,7 @@
 프로젝트를 추가할 때는 **적용 목적 → 주요 적용 영역 → 확인 가능한 산출물** 순서로 한 행에 요약합니다. 프로젝트별 주장과 수치는 해당 저장소의 실제 문서와 근거를 따릅니다.
 
 | 프로젝트 | 적용 목적 | 주요 적용 영역 | 산출물 |
-| :--- | :--- | :--- | :--- |
+| --- | --- | --- | --- |
 | [barcode-ingest-pipeline](https://github.com/buss-sooin/barcode-ingest-pipeline) | 비동기 수집 파이프라인의 성능·정합성과 제한된 운영 장애의 영향·복구 검증 | 장애 재현 조건과 판정 기준 설계, 실행 책임 분리, 결과 검토와 문서화 | 프로젝트 README의 성능·정합성 검증, 검증 브랜치의 장애 재현 기록·기술 문서 |
 
 연결 프로젝트가 늘어나면 같은 네 열을 유지하고, 상세 구현이나 실험 이력은 각 프로젝트의 문서로 연결합니다.
@@ -42,11 +42,11 @@
 ## 문서 안내
 
 | 문서 | 다루는 책임 |
-| :--- | :--- |
+| --- | --- |
 | [AI Engineering Guidelines](governance/AI-ENGINEERING-GUIDELINES.md) | Framework 수준의 사람·AI 협업, 권한, 의사결정과 검증 원칙 |
 | [Technical Documentation Guidelines](governance/TECHNICAL-DOCUMENTATION-GUIDELINES.md) | 한국어 기술문서의 용어·표현 기준 |
 | [Git Convention](conventions/git/GIT-CONVENTION.md) | 변경 책임을 드러내는 커밋과 공개 이력 관리 |
-| [Failure Reproduction Workflow](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md) · [실행 기록 틀](workflows/failure-reproduction/templates/REPRODUCTION-RECORD.md) · [적합성 기록](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW-CONFORMANCE.md) | 장애 재현의 설계·실행·근거·판정 |
+| [Failure Reproduction Workflow](workflows/failure-reproduction/FAILURE-REPRODUCTION-WORKFLOW.md) | 장애 재현의 설계·실행·근거·판정 |
 | [Project Collaboration Bootstrap Workflow](workflows/project-collaboration-bootstrap/PROJECT-COLLABORATION-BOOTSTRAP-WORKFLOW.md) | 프로젝트의 AI 역량·협업 경계 설정 |
 | [Post-Incident Analysis Workflow](workflows/post-incident-analysis/POST-INCIDENT-ANALYSIS-WORKFLOW.md) | 장애 이후 원인 분석과 학습 |
 
